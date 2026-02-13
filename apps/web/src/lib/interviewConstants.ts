@@ -27,7 +27,7 @@ export const BOILERPLATES: Record<string, string> = {
 
 function solution() {
   // Write your code here
-  console.log("Hello from InterviewMinds!");
+
 }
 
 solution();`,

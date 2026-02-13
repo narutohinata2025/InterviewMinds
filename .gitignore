@@ -15,6 +15,7 @@ dist
 build
 out
 dev-dist
+.turbo
 
 # Logs
 npm-debug.log*

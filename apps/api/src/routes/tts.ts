@@ -27,43 +27,52 @@ const escapeXML = (unsafe: string) => {
   });
 };
 
-router.post("/speak", requireAuth, async (req: any, res: any) => {
-  try {
-    const { text, gender, language = "english" } = req.body;
+interface TTSRequest {
+  text: string;
+  gender: string;
+  language?: string;
+}
 
-    if (!text) return res.status(400).json({ error: "Text is required" });
+router.post(
+  "/speak",
+  requireAuth,
+  async (req: express.Request, res: express.Response) => {
+    try {
+      const { text, gender, language = "english" } = req.body as TTSRequest;
 
-    const speechConfig = sdk.SpeechConfig.fromSubscription(
-      process.env.AZURE_SPEECH_KEY!,
-      process.env.AZURE_SPEECH_REGION!,
-    );
+      if (!text) return res.status(400).json({ error: "Text is required" });
 
-    // 🧠 LOGIC: Best Neural Voices for India
-    let voiceName = "";
+      const speechConfig = sdk.SpeechConfig.fromSubscription(
+        process.env.AZURE_SPEECH_KEY!,
+        process.env.AZURE_SPEECH_REGION!,
+      );
 
-    // Azure supports specific "Styles" for some voices (chat, cheerful, etc.)
-    // We will try to apply a conversational style via SSML if supported.
-    if (language === "hinglish") {
-      voiceName =
-        gender === "male" ? "hi-IN-MadhurNeural" : "hi-IN-SwaraNeural";
-    } else {
-      voiceName =
-        gender === "male" ? "en-IN-PrabhatNeural" : "en-IN-NeerjaNeural";
-    }
+      // 🧠 LOGIC: Best Neural Voices for India
+      let voiceName = "";
 
-    speechConfig.speechSynthesisVoiceName = voiceName;
+      // Azure supports specific "Styles" for some voices (chat, cheerful, etc.)
+      // We will try to apply a conversational style via SSML if supported.
+      if (language === "hinglish") {
+        voiceName =
+          gender === "male" ? "hi-IN-MadhurNeural" : "hi-IN-SwaraNeural";
+      } else {
+        voiceName =
+          gender === "male" ? "en-IN-PrabhatNeural" : "en-IN-NeerjaNeural";
+      }
 
-    // 2. Synthesizer Setup
-    const synthesizer = new sdk.SpeechSynthesizer(speechConfig, undefined);
+      speechConfig.speechSynthesisVoiceName = voiceName;
 
-    // ✨ MAGIC: Use SSML for Human-Like Prosody
-    // Rate="1.0" -> Normal Speed
-    // Pitch="default" -> Natural Pitch
-    // We wrap the text in SSML to force the Neural engine to treat it as a conversation.
+      // 2. Synthesizer Setup
+      const synthesizer = new sdk.SpeechSynthesizer(speechConfig, undefined);
 
-    const safeText = escapeXML(text);
+      // ✨ MAGIC: Use SSML for Human-Like Prosody
+      // Rate="1.0" -> Normal Speed
+      // Pitch="default" -> Natural Pitch
+      // We wrap the text in SSML to force the Neural engine to treat it as a conversation.
 
-    const ssml = `
+      const safeText = escapeXML(text);
+
+      const ssml = `
       <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="en-IN">
         <voice name="${voiceName}">
           <mstts:express-as style="chat">
@@ -75,42 +84,43 @@ router.post("/speak", requireAuth, async (req: any, res: any) => {
       </speak>
     `;
 
-    // 3. Generate Audio using SSML (Not plain text)
-    synthesizer.speakSsmlAsync(
-      ssml,
-      (result) => {
-        if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
-          const audioBuffer = Buffer.from(result.audioData);
-          res.set("Content-Type", "audio/mpeg");
-          res.send(audioBuffer);
-          synthesizer.close();
-        } else {
-          console.error("❌ Azure SSML Error:", result.errorDetails);
-
-          // Fallback: If SSML fails (rare), try plain text
-          console.warn("⚠️ Falling back to plain text TTS...");
-          const fallbackSynthesizer = new sdk.SpeechSynthesizer(
-            speechConfig,
-            undefined,
-          );
-          fallbackSynthesizer.speakTextAsync(text, (fbResult) => {
-            const fbBuffer = Buffer.from(fbResult.audioData);
+      // 3. Generate Audio using SSML (Not plain text)
+      synthesizer.speakSsmlAsync(
+        ssml,
+        (result) => {
+          if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
+            const audioBuffer = Buffer.from(result.audioData);
             res.set("Content-Type", "audio/mpeg");
-            res.send(fbBuffer);
-            fallbackSynthesizer.close();
-          });
-        }
-      },
-      (err) => {
-        console.error("❌ Synthesis Error:", err);
-        synthesizer.close();
-        res.status(500).json({ error: "TTS Error" });
-      },
-    );
-  } catch (error: any) {
-    console.error("❌ Server Error:", error.message);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
+            res.send(audioBuffer);
+            synthesizer.close();
+          } else {
+            console.error("❌ Azure SSML Error:", result.errorDetails);
+
+            // Fallback: If SSML fails (rare), try plain text
+            console.warn("⚠️ Falling back to plain text TTS...");
+            const fallbackSynthesizer = new sdk.SpeechSynthesizer(
+              speechConfig,
+              undefined,
+            );
+            fallbackSynthesizer.speakTextAsync(text, (fbResult) => {
+              const fbBuffer = Buffer.from(fbResult.audioData);
+              res.set("Content-Type", "audio/mpeg");
+              res.send(fbBuffer);
+              fallbackSynthesizer.close();
+            });
+          }
+        },
+        (err) => {
+          console.error("❌ Synthesis Error:", err);
+          synthesizer.close();
+          res.status(500).json({ error: "TTS Error" });
+        },
+      );
+    } catch (error: unknown) {
+      console.error("❌ Server Error:", (error as Error).message);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  },
+);
 
 export default router;

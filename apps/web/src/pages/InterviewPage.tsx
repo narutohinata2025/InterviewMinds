@@ -41,7 +41,7 @@ export default function InterviewPage() {
   const [userEmotion, setUserEmotion] = useState("Neutral");
 
   useEffect(() => {
-    // console.log(userEmotion);
+    //
   }, [userEmotion]);
 
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
@@ -113,24 +113,50 @@ export default function InterviewPage() {
       toast.error("No resume found");
       navigate("/");
     }
-  }, []);
-
-  const handleStartInterview = () => {
-    setShowSetup(false);
-    setIsInterviewStarted(true);
-    if (!hasInitialized.current) {
-      hasInitialized.current = true;
-      const initialPrompt =
-        languageMode === "hinglish"
-          ? "Start the technical interview based on my resume. Speak in Hinglish (Mix of Hindi/English)."
-          : "Start the technical interview based on my resume.";
-      handleAIResponse(initialPrompt, true);
-    }
-  };
+  }, [navigate]);
 
   useEffect(() => {
     if (transcript) setInput(transcript);
   }, [transcript]);
+
+  const handleAIResponse = async (userMessage: string, isInit = false) => {
+    const trimmedMsg = userMessage.trim();
+    if (!trimmedMsg) return;
+    if (isProcessing.current) return;
+    isProcessing.current = true;
+    setIsLoading(true);
+
+    const resumeId = localStorage.getItem("resumeId");
+    if (!isInit) {
+      setMessages((prev) => [...prev, { role: "user", content: trimmedMsg }]);
+      setInput("");
+      setTranscript("");
+    }
+
+    try {
+      const res = await api.post("/chat", {
+        message: trimmedMsg,
+        resumeId,
+        history: messages.map((m) => ({
+          role: m.role === "ai" ? "model" : "user",
+          text: m.content,
+        })),
+        mode: persona,
+        difficulty,
+        language: languageMode,
+      });
+      const aiReply = res.data.reply;
+      setMessages((prev) => [...prev, { role: "ai", content: aiReply }]);
+      speak(aiReply, getCurrentGender());
+    } catch {
+      toast.error("Failed to connect to AI.");
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => {
+        isProcessing.current = false;
+      }, 500);
+    }
+  };
 
   useEffect(() => {
     if (
@@ -147,7 +173,21 @@ export default function InterviewPage() {
       }, 800);
       return () => clearTimeout(timer);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isListening, transcript, isLoading]);
+
+  const handleStartInterview = () => {
+    setShowSetup(false);
+    setIsInterviewStarted(true);
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      const initialPrompt =
+        languageMode === "hinglish"
+          ? "Start the technical interview based on my resume. Speak in Hinglish (Mix of Hindi/English)."
+          : "Start the technical interview based on my resume.";
+      handleAIResponse(initialPrompt, true);
+    }
+  };
 
   // Spacebar Mic Logic
   useEffect(() => {
@@ -193,50 +233,11 @@ export default function InterviewPage() {
       if (result.run.code !== 0) setExecError(result.run.output);
       else setOutput(result.run.output);
       toast.success("Code Executed!");
-    } catch (err: any) {
-      setExecError(err.toString() || "Execution failed");
+    } catch (err: unknown) {
+      setExecError((err as Error).toString() || "Execution failed");
       toast.error("Execution failed");
     } finally {
       setIsCompiling(false);
-    }
-  };
-
-  const handleAIResponse = async (userMessage: string, isInit = false) => {
-    const trimmedMsg = userMessage.trim();
-    if (!trimmedMsg) return;
-    if (isProcessing.current) return;
-    isProcessing.current = true;
-    setIsLoading(true);
-
-    const resumeId = localStorage.getItem("resumeId");
-    if (!isInit) {
-      setMessages((prev) => [...prev, { role: "user", content: trimmedMsg }]);
-      setInput("");
-      setTranscript("");
-    }
-
-    try {
-      const res = await api.post("/chat", {
-        message: trimmedMsg,
-        resumeId,
-        history: messages.map((m) => ({
-          role: m.role === "ai" ? "model" : "user",
-          text: m.content,
-        })),
-        mode: persona,
-        difficulty,
-        language: languageMode,
-      });
-      const aiReply = res.data.reply;
-      setMessages((prev) => [...prev, { role: "ai", content: aiReply }]);
-      speak(aiReply, getCurrentGender());
-    } catch (error) {
-      toast.error("Failed to connect to AI.");
-    } finally {
-      setIsLoading(false);
-      setTimeout(() => {
-        isProcessing.current = false;
-      }, 500);
     }
   };
 
@@ -268,7 +269,8 @@ export default function InterviewPage() {
           toast.success("Saved!");
         }
         navigate(`/feedback/${interviewId}`);
-      } catch (e) {
+      } catch {
+        // eslint-disable-line @typescript-eslint/no-unused-vars
         toast.error("Error ending session");
         setIsSaving(false);
       }

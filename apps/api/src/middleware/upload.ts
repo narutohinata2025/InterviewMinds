@@ -4,8 +4,10 @@ import cloudinary from "../config/cloudinary";
 
 // Storage Configuration for Cloudinary
 const storage = new CloudinaryStorage({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   cloudinary: cloudinary as any,
-  params: async (req, file) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  params: async (_req, _file) => {
     return {
       folder: "interview_minds_videos", // Cloudinary folder name
       resource_type: "video", // Important for video uploads

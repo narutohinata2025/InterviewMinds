@@ -26,7 +26,7 @@ app.use(
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true, // ⚠️ Ye sabse zaroori hai Mobile Auth ke liye
-  })
+  }),
 );
 
 app.use(express.json());
@@ -54,15 +54,13 @@ if (!MONGO_URI) {
 } else {
   mongoose
     .connect(MONGO_URI)
-    .then(() => console.log("✅ MongoDB Connected Successfully"))
+
     .catch((err) => console.error("❌ MongoDB Connection Error:", err));
 }
 
 // 6. Start Server
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-  });
+  app.listen(PORT, () => {});
 }
 
 // 7. Export App

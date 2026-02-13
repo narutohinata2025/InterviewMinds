@@ -6,6 +6,7 @@ import { VitePWA } from "vite-plugin-pwa"; // ✅ 1. Import PWA Plugin
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     react() as any,
     // ✅ 2. PWA Configuration Add ki
     VitePWA({

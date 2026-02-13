@@ -20,8 +20,9 @@ export const executeCode = async (language: string, code: string) => {
       code,
     });
     return response.data;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Execution Failed:", error);
-    throw error.response?.data?.error || "Failed to run code";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    throw (error as any).response?.data?.error || "Failed to run code";
   }
 };

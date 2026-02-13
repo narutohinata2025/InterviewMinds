@@ -14,7 +14,7 @@ interface InterviewHistory {
   score: number; // 0-100
   feedback: string; // Text summary
   createdAt: string; // ISO Date string
-  metrics: any[];
+  metrics: unknown[];
 }
 
 export default function DashboardPage() {

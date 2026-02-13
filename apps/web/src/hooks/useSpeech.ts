@@ -2,7 +2,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { api } from "@/lib/api";
 
 interface IWindow extends Window {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   webkitSpeechRecognition: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   SpeechRecognition: any;
 }
 
@@ -11,6 +13,7 @@ export const useSpeech = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState("");
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -28,6 +31,7 @@ export const useSpeech = () => {
 
       recognition.onstart = () => setIsListening(true);
       recognition.onend = () => setIsListening(false);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       recognition.onresult = (event: any) => {
         const current = event.results[0][0].transcript;
         setTranscript(current);

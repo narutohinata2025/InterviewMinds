@@ -41,16 +41,16 @@ router.post("/execute", requireAuth, async (req, res) => {
             content: code,
           },
         ],
-      }
+      },
     );
 
     // Piston ka result wapas bhejo
     res.json(response.data);
-  } catch (error: any) {
-    console.error("Compiler Error:", error.message);
+  } catch (error: unknown) {
+    console.error("Compiler Error:", (error as Error).message);
     res.status(500).json({
       error: "Failed to execute code",
-      details: error.message,
+      details: (error as Error).message,
     });
   }
 });

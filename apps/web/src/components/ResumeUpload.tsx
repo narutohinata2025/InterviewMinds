@@ -81,11 +81,13 @@ export default function ResumeUpload() {
 
       // Thoda delay taaki toast dikhe
       setTimeout(() => navigate("/interview"), 1000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Upload failed", error);
 
       const errorMessage =
-        error.response?.data?.error || "Connection Timeout or Server Error";
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (error as any).response?.data?.error ||
+        "Connection Timeout or Server Error";
 
       toast.error("Upload Failed", {
         description: errorMessage,

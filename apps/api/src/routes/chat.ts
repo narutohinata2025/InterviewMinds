@@ -11,7 +11,14 @@ const router = express.Router();
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // 🎭 PERSONA DEFINITIONS
-const PERSONAS: any = {
+interface Persona {
+  name: string;
+  role: string;
+  style: string;
+  tone: string;
+}
+
+const PERSONAS: Record<string, Persona> = {
   strict: {
     name: "Vikram",
     role: "Senior Staff Engineer (Strict & Technical)",
@@ -35,7 +42,16 @@ const PERSONAS: any = {
   },
 };
 
-router.post("/", async (req: any, res: any) => {
+interface ChatRequest {
+  message: string;
+  resumeId: string;
+  history?: { role: string; text: string }[];
+  mode?: string;
+  difficulty?: string;
+  language?: string;
+}
+
+router.post("/", async (req: express.Request, res: express.Response) => {
   try {
     const {
       message,
@@ -44,7 +60,7 @@ router.post("/", async (req: any, res: any) => {
       mode = "strict",
       difficulty = "medium",
       language = "english",
-    } = req.body;
+    } = req.body as ChatRequest;
 
     if (!message || !resumeId)
       return res.status(400).json({ error: "Required fields missing" });
@@ -61,8 +77,8 @@ router.post("/", async (req: any, res: any) => {
       } else {
         throw new Error("Resume content not found");
       }
-    } catch (err: any) {
-      console.error("❌ Resume Fetch Error:", err.message);
+    } catch (err: unknown) {
+      console.error("❌ Resume Fetch Error:", (err as Error).message);
       return res.status(404).json({ error: "Resume not found" });
     }
 
@@ -125,11 +141,12 @@ router.post("/", async (req: any, res: any) => {
       If the user says "Hello" or "Start", introduce yourself as ${persona.name}, mention a specific project you found interesting in their resume, and ask a deep technical question about it immediately.
     `;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const messages: any[] = [{ role: "system", content: systemPrompt }];
 
     // Inject History
     if (history && Array.isArray(history)) {
-      history.forEach((msg: any) => {
+      history.forEach((msg) => {
         messages.push({
           role: msg.role === "user" ? "user" : "assistant",
           content: msg.text,
@@ -150,11 +167,11 @@ router.post("/", async (req: any, res: any) => {
     const aiText = completion.choices[0]?.message?.content || "Server Error.";
 
     res.json({ reply: aiText });
-  } catch (error: any) {
-    console.error("❌ Critical Chat Error:", error.message);
+  } catch (error: unknown) {
+    console.error("❌ Critical Chat Error:", (error as Error).message);
     res
       .status(500)
-      .json({ error: "AI Service Failed", details: error.message });
+      .json({ error: "AI Service Failed", details: (error as Error).message });
   }
 });
 

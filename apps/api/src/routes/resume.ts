@@ -9,17 +9,23 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+interface AuthenticatedRequest extends express.Request {
+  auth?: { userId: string };
+  file?: Express.Multer.File;
+}
+
 const router = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 // ✅ Singleton Pattern for Model Loading (Taaki baar-baar load na ho)
 class EmbeddingService {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static pipeline: any = null;
 
   static async getPipeline() {
     if (!this.pipeline) {
-      console.log("📥 Loading Local Embedding Model (First time only)...");
+      // console.log("📥 Loading Local Embedding Model (First time only)...");
       // 'Xenova/all-MiniLM-L6-v2' ek super-lightweight model hai (sirf ~40MB)
       this.pipeline = await pipeline(
         "feature-extraction",
@@ -34,27 +40,27 @@ router.post(
   "/upload",
   requireAuth,
   upload.single("resume"),
-  async (req: any, res: any) => {
+  async (req: express.Request, res: express.Response) => {
     try {
-      const userId = req.auth.userId;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.auth?.userId;
 
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
       }
 
-      console.log(`📂 Processing Resume for User: ${userId}`);
-
       // 1. PDF Parse
-      // @ts-ignore
+      // 1. PDF Parse
       const pdfParser = new PDFParser(null, 1);
       const rawText: string = await new Promise((resolve, reject) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pdfParser.on("pdfParser_dataError", (errData: any) =>
           reject(errData.parserError),
         );
         pdfParser.on("pdfParser_dataReady", () =>
           resolve(pdfParser.getRawTextContent()),
         );
-        pdfParser.parseBuffer(req.file.buffer);
+        pdfParser.parseBuffer(req.file!.buffer);
       });
 
       const cleanText = rawText.replace(/----------------/g, " ").trim();
@@ -70,10 +76,8 @@ router.post(
       });
 
       const outputChunks = await splitter.createDocuments([cleanText]);
-      console.log(`🧩 Split resume into ${outputChunks.length} chunks.`);
 
       // 3. EMBEDDINGS (Local Execution)
-      console.log("⏳ Generating Embeddings locally (No API Key)...");
 
       const extractor = await EmbeddingService.getPipeline();
       const chunksWithEmbeddings = [];
@@ -95,9 +99,9 @@ router.post(
         }
       }
 
-      console.log(
-        `✅ Success! Generated ${chunksWithEmbeddings.length} vectors.`,
-      );
+      // console.log(
+      //   `✅ Success! Generated ${chunksWithEmbeddings.length} vectors.`,
+      // );
 
       // 4. Save to MongoDB
       const newResume = await ResumeModel.create({
@@ -107,18 +111,17 @@ router.post(
         chunks: chunksWithEmbeddings,
       });
 
-      console.log("✅ Resume Vectorized & Saved ID:", newResume._id);
-
       res.json({
         message: "Resume processed successfully!",
         id: newResume._id,
         previewText: cleanText.substring(0, 100) + "...",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("❌ Critical Error:", error);
-      res
-        .status(500)
-        .json({ error: "Failed to process resume", details: error.message });
+      res.status(500).json({
+        error: "Failed to process resume",
+        details: (error as Error).message,
+      });
     }
   },
 );

@@ -2,18 +2,3 @@
 > api@1.0.0 build
 > tsc
 
-src/middleware/upload.ts(7,3): error TS2322: Type 'typeof import("D:/InterviewMinds/apps/api/node_modules/cloudinary/types/index").v2' is not assignable to type 'typeof import("D:/InterviewMinds/node_modules/cloudinary/types/index").v2'.
-  The types of 'api.add_metadata_field' are incompatible between these types.
-    Type '{ (field: import("D:/InterviewMinds/apps/api/node_modules/cloudinary/types/index").MetadataFieldApiOptions, options?: import("D:/InterviewMinds/apps/api/node_modules/cloudinary/types/index").AdminApiOptions | undefined, callback?: import("D:/InterviewMinds/apps/api/node_modules/cloudinary/types/index").ResponseCallb...' is not assignable to type '{ (field: import("D:/InterviewMinds/node_modules/cloudinary/types/index").MetadataFieldApiOptions, options?: import("D:/InterviewMinds/node_modules/cloudinary/types/index").AdminApiOptions | undefined, callback?: import("D:/InterviewMinds/node_modules/cloudinary/types/index").ResponseCallback | undefined): Promise<....'.
-      Types of parameters 'field' and 'field' are incompatible.
-        Type 'import("D:/InterviewMinds/node_modules/cloudinary/types/index").MetadataFieldApiOptions' is not assignable to type 'import("D:/InterviewMinds/apps/api/node_modules/cloudinary/types/index").MetadataFieldApiOptions'.
-          Types of property 'datasource' are incompatible.
-            Type 'DatasourceEntry | undefined' is not assignable to type '{ values: DatasourceEntry[]; } | undefined'.
-              Property 'values' is missing in type 'DatasourceEntry' but required in type '{ values: DatasourceEntry[]; }'.
-npm error Lifecycle script `build` failed with error:
-npm error code 2
-npm error path D:\InterviewMinds\apps\api
-npm error workspace api@1.0.0
-npm error location D:\InterviewMinds\apps\api
-npm error command failed
-npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsc

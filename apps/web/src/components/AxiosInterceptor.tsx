@@ -2,7 +2,11 @@ import { useAuth } from "@clerk/clerk-react";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 
-export const AxiosInterceptor = ({ children }: { children: any }) => {
+export const AxiosInterceptor = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
   const { getToken } = useAuth();
   const [isReady, setIsReady] = useState(false);
 
@@ -25,7 +29,7 @@ export const AxiosInterceptor = ({ children }: { children: any }) => {
           // Yahan chaho to login page par redirect kar sakte ho
         }
         return Promise.reject(error);
-      }
+      },
     );
 
     setIsReady(true);

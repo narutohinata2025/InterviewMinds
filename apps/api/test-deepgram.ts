@@ -27,13 +27,15 @@ async function testDeepgram() {
 
     console.log("✅ SUCCESS! Audio generated.");
     console.log("📊 Size:", response.data.length, "bytes");
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("❌ FAILED!");
-    if (error.response) {
-      console.error("👉 Status:", error.response.status);
-      console.error("👉 Reason:", error.response.data.toString());
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const err = error as any;
+    if (err.response) {
+      console.error("👉 Status:", err.response.status);
+      console.error("👉 Reason:", err.response.data.toString());
     } else {
-      console.error("👉 Error:", error.message);
+      console.error("👉 Error:", err.message);
     }
   }
 }

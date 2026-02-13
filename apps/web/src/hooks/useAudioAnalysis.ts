@@ -19,6 +19,7 @@ export function useAudioAnalysis(isListening: boolean) {
       stopAnalysis();
     }
     return () => stopAnalysis();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isListening]);
 
   const startAnalysis = async () => {
@@ -27,6 +28,7 @@ export function useAudioAnalysis(isListening: boolean) {
 
       // Browser Audio Context Setup
       const AudioContext =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         window.AudioContext || (window as any).webkitAudioContext;
       const audioContext = new AudioContext();
       const analyser = audioContext.createAnalyser();

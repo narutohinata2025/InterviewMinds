@@ -7,8 +7,8 @@ import { toast } from "sonner";
 
 export default function WebcamAnalysis({
   onEmotionUpdate,
-  isInterviewActive, // ✅ Controls Recording
-  onRecordingComplete, // ✅ Returns Video Blob
+  isInterviewActive,
+  onRecordingComplete,
 }: {
   onEmotionUpdate?: (emotion: string) => void;
   isInterviewActive?: boolean;
@@ -20,7 +20,7 @@ export default function WebcamAnalysis({
   // 🎥 Stream & Recorder Refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const streamRef = useRef<MediaStream | null>(null); // ✅ Added ref for reliable cleanup
+  const streamRef = useRef<MediaStream | null>(null);
 
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [isVideoOn, setIsVideoOn] = useState(false);
@@ -41,8 +41,6 @@ export default function WebcamAnalysis({
         ]);
         setIsModelLoaded(true);
         console.log("✅ AI Models Loaded");
-
-        // 🚀 AUTO-START: Models load hote hi camera start karo
         startVideo();
       } catch (err) {
         console.error("❌ Model Load Error:", err);
@@ -50,7 +48,70 @@ export default function WebcamAnalysis({
       }
     };
     initCamera();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const startVideo = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        streamRef.current = stream;
+        setIsVideoOn(true);
+      }
+    } catch (err) {
+      console.error("Camera Error:", err);
+      toast.error("Could not access camera/mic");
+    }
+  };
+
+  const stopTracks = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      setIsVideoOn(false);
+      if (videoRef.current) videoRef.current.srcObject = null;
+    }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  };
+
+  const startRecording = () => {
+    if (!streamRef.current) return;
+    chunksRef.current = [];
+    try {
+      const recorder = new MediaRecorder(streamRef.current, {
+        mimeType: "video/webm",
+      });
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: "video/webm" });
+        if (onRecordingComplete) onRecordingComplete(blob);
+      };
+      recorder.start();
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Recording Error:", err);
+    }
+  };
+
+  const stopRecording = () => {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
 
   // 2. Control Recording & Camera based on Interview Status
   useEffect(() => {
@@ -66,98 +127,8 @@ export default function WebcamAnalysis({
         setTimeout(() => stopTracks(), 500);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isInterviewActive, isVideoOn, isRecording]);
-
-  // 3. Start Video (Camera + Mic)
-  const startVideo = async () => {
-    try {
-      // ✅ Request Audio + Video
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
-
-      streamRef.current = stream; // Save stream for cleanup
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        // Mute locally to avoid echo, but stream has audio
-        videoRef.current.muted = true;
-      }
-      setIsVideoOn(true);
-    } catch (err) {
-      console.error("Camera Error:", err);
-      toast.error("Camera/Mic access denied. Please allow permissions.");
-    }
-  };
-
-  // 4. Start Recording Logic
-  const startRecording = () => {
-    if (!streamRef.current) return;
-
-    const stream = streamRef.current;
-    // Use supported mime type (Prioritize VP9 for quality)
-    const mimeType = MediaRecorder.isTypeSupported("video/webm; codecs=vp9")
-      ? "video/webm; codecs=vp9"
-      : "video/webm";
-
-    const mediaRecorder = new MediaRecorder(stream, { mimeType });
-
-    mediaRecorderRef.current = mediaRecorder;
-    chunksRef.current = [];
-
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        chunksRef.current.push(event.data);
-      }
-    };
-
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: "video/webm" });
-      console.log("📼 Recording Finished. Size:", blob.size);
-      if (onRecordingComplete) onRecordingComplete(blob);
-    };
-
-    mediaRecorder.start();
-    setIsRecording(true);
-    toast.info("🔴 Recording Started");
-  };
-
-  // 5. Stop Recording Logic
-  const stopRecording = () => {
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state === "recording"
-    ) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      toast.success("Recording Saved Locally");
-    }
-  };
-
-  // 6. Stop Everything (Robust Cleanup)
-  const stopTracks = () => {
-    // Stop recording first if active
-    if (isRecording) stopRecording();
-
-    // Stop Hardware Camera/Mic (Green Light OFF)
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-
-    setIsVideoOn(false);
-
-    // Stop AI Loop
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  };
 
   // 7. Cleanup on Unmount
   useEffect(() => {
@@ -166,29 +137,37 @@ export default function WebcamAnalysis({
     };
   }, []);
 
-  // 8. AI Loop (Face Analysis)
   const handleVideoPlay = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (!isModelLoaded || !videoRef.current) return;
 
     intervalRef.current = setInterval(async () => {
-      if (!videoRef.current || !canvasRef.current) return;
-      if (videoRef.current.paused || videoRef.current.ended) return;
+      if (
+        !videoRef.current ||
+        videoRef.current.paused ||
+        videoRef.current.ended
+      )
+        return;
 
       const detections = await faceapi
         .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions())
         .withFaceExpressions();
 
-      // 🚨 MULTIPLE FACE DETECTION LOGIC
-      if (detections.length > 1) {
-        toast.error("⚠️ Multiple Faces Detected!", {
-          description: "Only the candidate should be visible.",
-          duration: 2000,
-        });
+      if (canvasRef.current && videoRef.current) {
+        const displaySize = {
+          width: videoRef.current.videoWidth,
+          height: videoRef.current.videoHeight,
+        };
+        faceapi.matchDimensions(canvasRef.current, displaySize);
+        // const resizedDetections = faceapi.resizeResults(
+        //   detections,
+        //   displaySize,
+        // );
       }
 
       if (detections.length > 0) {
         const expressions = detections[0].expressions;
         const maxEmotion = Object.keys(expressions).reduce((a, b) =>
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
           expressions[a] > expressions[b] ? a : b,
         );

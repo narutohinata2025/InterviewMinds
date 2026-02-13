@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 // ✅ TypeScript definition for Global Window Variable
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     deferredPrompt: any;
   }
 }
@@ -20,6 +21,7 @@ export default function Navbar() {
   // ===========================================================================
   // 📱 PWA INSTALL LOGIC (Robust & Mobile Friendly)
   // ===========================================================================
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstalled, setIsInstalled] = useState(false);
 
@@ -36,6 +38,7 @@ export default function Navbar() {
     }
 
     // 3. Listen for Events
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
