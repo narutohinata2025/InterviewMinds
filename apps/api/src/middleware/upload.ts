@@ -4,7 +4,7 @@ import cloudinary from "../config/cloudinary";
 
 // Storage Configuration for Cloudinary
 const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
+  cloudinary: cloudinary as any,
   params: async (req, file) => {
     return {
       folder: "interview_minds_videos", // Cloudinary folder name
