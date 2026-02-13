@@ -52,7 +52,10 @@
   },
   "overrides": {
     "multer-storage-cloudinary": {
-      "cloudinary": "$cloudinary"
-    }
+      "cloudinary": "^2.9.0"
+    },
+    "lodash": "^4.17.21",
+    "qs": "^6.13.0",
+    "diff": "^5.2.0"
   }
 }

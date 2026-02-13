@@ -17,5 +17,14 @@
   "packageManager": "npm@10.2.0",
   "engines": {
     "node": ">=18"
+  },
+  "overrides": {
+    "lodash": "^4.17.21",
+    "node-fetch": "^2.7.0",
+    "qs": "^6.13.0",
+    "diff": "^5.2.0",
+    "multer-storage-cloudinary": {
+      "cloudinary": "^2.7.0"
+    }
   }
 }
