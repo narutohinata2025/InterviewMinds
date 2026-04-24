@@ -70,10 +70,11 @@ router.post("/", async (req: express.Request, res: express.Response) => {
     let resumeText = "";
     let jobDescription = "";
     const record = resumeStore.get(resumeId);
-    if (record) {
-      resumeText = record.content.substring(0, 15000);
-      jobDescription = record.jobDescription || "";
+    if (!record) {
+      return res.status(404).json({ error: "Resume not found. Please re-upload your resume." });
     }
+    resumeText = record.content.substring(0, 15000);
+    jobDescription = record.jobDescription || "";
 
     const persona = PERSONAS[mode] || PERSONAS["strict"];
 

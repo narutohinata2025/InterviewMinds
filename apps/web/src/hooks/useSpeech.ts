@@ -109,6 +109,7 @@ export const useSpeech = () => {
       }
       return (
         v.lang.startsWith("en") &&
+        !v.name.toLowerCase().includes("female") &&
         (v.name.toLowerCase().includes("male") ||
           v.name.toLowerCase().includes("daniel") ||
           v.name.toLowerCase().includes("google uk english male"))
