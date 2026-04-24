@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as PIXI from "pixi.js";
-import { Live2DModel } from "pixi-live2d-display";
+import { Live2DModel } from "pixi-live2d-display/cubism4";
 
 window.PIXI = PIXI;
 
@@ -29,6 +29,8 @@ export default function AIAvatar({
   useEffect(() => {
     if (!containerRef.current) return;
 
+    let destroyed = false;
+
     const canvas = document.createElement("canvas");
     canvas.style.width = "100%";
     canvas.style.height = "100%";
@@ -44,6 +46,11 @@ export default function AIAvatar({
 
     Live2DModel.from(MODEL_PATH)
       .then((m) => {
+        if (destroyed) {
+          m.destroy();
+          return;
+        }
+
         modelRef.current = m;
 
         const containerW = containerRef.current?.clientWidth ?? 280;
@@ -58,7 +65,6 @@ export default function AIAvatar({
         pixiApp.stage.addChild(m);
         setLoaded(true);
 
-        // Play idle motion
         try {
           m.motion("", 0);
         } catch {
@@ -66,11 +72,14 @@ export default function AIAvatar({
         }
       })
       .catch((err) => {
-        console.error("Live2D model load failed:", err);
-        setError(true);
+        if (!destroyed) {
+          console.error("Live2D model load failed:", err);
+          setError(true);
+        }
       });
 
     return () => {
+      destroyed = true;
       if (mouthIntervalRef.current) clearInterval(mouthIntervalRef.current);
       if (motionIntervalRef.current) clearInterval(motionIntervalRef.current);
       pixiApp.destroy(true, { children: true });
