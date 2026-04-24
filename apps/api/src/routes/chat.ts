@@ -119,7 +119,8 @@ If the user says "Hello" or "Start", introduce yourself as ${persona.name}, ment
 `;
 
     const model = genAI.getGenerativeModel({
-      model: process.env.GEMINI_MODEL || "gemini-2.0-flash-lite",
+      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+      systemInstruction: { role: "user", parts: [{ text: systemPrompt }] },
     });
 
     const chatHistory: { role: "user" | "model"; parts: { text: string }[] }[] = [];
@@ -135,7 +136,6 @@ If the user says "Hello" or "Start", introduce yourself as ${persona.name}, ment
 
     const chat = model.startChat({
       history: chatHistory,
-      systemInstruction: systemPrompt,
     });
 
     const result = await chat.sendMessage(message);

@@ -58,7 +58,7 @@ cd apps/web && npm install && cd ../..
 ```env
 PORT=8000
 GEMINI_API_KEY=your-gemini-api-key
-GEMINI_MODEL=gemini-2.0-flash-lite
+GEMINI_MODEL=gemini-2.5-flash
 ```
 
 **Frontend** (`apps/web/.env`):

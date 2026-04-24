@@ -92,7 +92,7 @@ Return ONLY a valid JSON object with this exact structure:
       .join("\n");
 
     const model = genAI.getGenerativeModel({
-      model: process.env.GEMINI_MODEL || "gemini-2.0-flash-lite",
+      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
       generationConfig: {
         responseMimeType: "application/json",
         temperature: 0.2,
