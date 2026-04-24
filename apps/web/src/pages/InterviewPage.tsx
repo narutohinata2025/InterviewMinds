@@ -106,8 +106,8 @@ export default function InterviewPage() {
     setIsLoading(true);
 
     const resumeId = localStorage.getItem("resumeId");
+    setMessages((prev) => [...prev, { role: "user", content: trimmedMsg }]);
     if (!isInit) {
-      setMessages((prev) => [...prev, { role: "user", content: trimmedMsg }]);
       setInput("");
       setTranscript("");
     }
