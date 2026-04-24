@@ -1,44 +1,46 @@
 import express from "express";
-import { ResumeModel } from "../models/Resume";
-import Groq from "groq-sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
+import { resumeStore } from "./resume";
 
 dotenv.config();
 
 const router = express.Router();
 
-// ✅ 1. SETUP GROQ (Using Llama 3 70B for Deep Analysis)
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-// 🎭 PERSONA DEFINITIONS
 interface Persona {
   name: string;
   role: string;
   style: string;
   tone: string;
+  gender: "male" | "female";
 }
 
 const PERSONAS: Record<string, Persona> = {
   strict: {
-    name: "Vikram",
+    name: "Alex",
     role: "Senior Staff Engineer (Strict & Technical)",
     style:
-      "Direct, skeptical. Drills down into specific implementation details of projects. Hates surface-level answers.",
+      "Direct, skeptical. Drills into specific implementation details. Hates surface-level answers.",
     tone: "Professional, demanding, no-nonsense.",
+    gender: "male",
   },
   friendly: {
-    name: "Neha",
+    name: "Sarah",
     role: "Engineering Manager (Supportive)",
     style:
-      "Curious about problem-solving approaches in your projects. Focuses on 'How' and 'Why'.",
+      "Curious about problem-solving approaches. Focuses on 'How' and 'Why'.",
     tone: "Warm, constructive, engaging.",
+    gender: "female",
   },
   system: {
-    name: "Sam",
+    name: "James",
     role: "System Architect",
     style:
-      "Focuses on the architecture of your projects. Asks about database choices, scalability, and trade-offs.",
+      "Focuses on architecture. Asks about database choices, scalability, and trade-offs.",
     tone: "Analytical, thoughtful, detail-oriented.",
+    gender: "male",
   },
 };
 
@@ -48,7 +50,7 @@ interface ChatRequest {
   history?: { role: string; text: string }[];
   mode?: string;
   difficulty?: string;
-  language?: string;
+  jobDescription?: string;
 }
 
 router.post("/", async (req: express.Request, res: express.Response) => {
@@ -59,119 +61,93 @@ router.post("/", async (req: express.Request, res: express.Response) => {
       history,
       mode = "strict",
       difficulty = "medium",
-      language = "english",
     } = req.body as ChatRequest;
 
-    if (!message || !resumeId)
-      return res.status(400).json({ error: "Required fields missing" });
-
-    // --- STEP 1: LOAD FULL RESUME CONTEXT (No Vector Search) ---
-    // Why? Resumes are small enough for Llama 3's context window.
-    // Sending the full text ensures the AI knows EVERYTHING (Projects, Skills, Experience).
-    let contextText = "";
-    try {
-      const r = await ResumeModel.findById(resumeId);
-      if (r && r.content) {
-        // Limit to ~15,000 chars to be safe, but usually resumes are much smaller.
-        contextText = r.content.substring(0, 15000);
-      } else {
-        throw new Error("Resume content not found");
-      }
-    } catch (err: unknown) {
-      console.error("❌ Resume Fetch Error:", (err as Error).message);
-      return res.status(404).json({ error: "Resume not found" });
+    if (!message || !resumeId) {
+      return res.status(400).json({ error: "Message and resumeId are required" });
     }
 
-    // --- STEP 2: SELECT PERSONA ---
+    let resumeText = "";
+    let jobDescription = "";
+    const record = resumeStore.get(resumeId);
+    if (record) {
+      resumeText = record.content.substring(0, 15000);
+      jobDescription = record.jobDescription || "";
+    }
+
     const persona = PERSONAS[mode] || PERSONAS["strict"];
 
-    // --- STEP 3: LANGUAGE INSTRUCTION BUILDER ---
-    let languageInstruction = "";
-    if (language === "hinglish") {
-      languageInstruction = `
-      - **Language Mode:** HINGLISH (Mix of Hindi & English).
-      - **Rule:** Speak naturally like an Indian Tech Interviewer. Use English for technical terms (e.g., "Dependency Injection", "Scalability", "Latency") but use Hindi for connecting verbs/grammar.
-      - **Example:** "Tumne jo 'SwadKart' project banaya hai, usme Redux kyu use kiya Context API ke jagah?"
-      - **Avoid:** Do not use pure Shuddh Hindi. Keep it casual professional.
-      `;
-    } else {
-      languageInstruction = `
-      - **Language Mode:** Professional English.
-      - **Rule:** Use clear, concise, and professional grammar.
-      `;
-    }
+    const jdContext = jobDescription
+      ? `\n--- JOB DESCRIPTION ---\n${jobDescription}\n`
+      : "";
 
-    // --- STEP 4: SYSTEM PROMPT (PROFESSIONAL TRAINING 🧠) ---
     const systemPrompt = `
-      You are '${persona.name}', a ${persona.role}.
-      You are conducting a high-stakes technical interview.
+You are '${persona.name}', a ${persona.role}.
+You are conducting a high-stakes technical interview in English.
 
-      --- 🧠 DEEP RESUME ANALYSIS MODE ---
-      **CONTEXT:** You have the candidate's FULL resume below.
-      **GOAL:** Do NOT ask generic questions (e.g., "Tell me about yourself"). Instead, pick a SPECIFIC project or skill from the resume and drill down immediately.
+--- RESUME CONTEXT ---
+${resumeText}
+${jdContext}
 
-      --- RESUME CONTEXT ---
-      ${contextText}
+--- YOUR BEHAVIOR & RULES ---
+1. **Cite Specifics:** Reference the resume and job description explicitly.
+   - Bad: "How do you handle state management?"
+   - Good: "I see you used Redux Toolkit in your project. Why did you choose that over Context API?"
 
-      --- INTERVIEW ENVIRONMENT ---
-      **IMPORTANT:** The candidate has a live **Code Editor** & **Compiler**.
-      **TASK:** You MUST test their coding skills.
+2. **Coding Challenge (MANDATORY):**
+   - After 2-3 theory questions, ask the candidate to write code in the editor.
+   - Say: "Let's see how you implement this. Open the editor and write a function to..."
+   - Ask them to Run the code and explain the output.
 
-      --- YOUR BEHAVIOR & RULES ---
-      1. **Cite Specifics:** When asking a question, reference the resume explicitly.
-         - ❌ Bad: "How do you handle state management?"
-         - ✅ Good: "I see you used **Redux Toolkit** in your **SwadKart** project. Why did you choose that over Context API for this specific use case?"
-      
-      2. **The Coding Challenge (MANDATORY):**
-         - After 1-2 initial theory questions, you MUST ask them to write code.
-         - Say: "Okay, let's see how you implement this. Open the editor and write a function to..."
-         - Ask them to **Run the code** and explain the output.
+3. **Job Description Alignment:**
+   ${jobDescription ? "Match questions to the JD requirements. Test skills mentioned in the job posting." : "Ask relevant technical questions based on the resume."}
 
-      3. **Strictness:**
-         - If they give a vague answer, cut them off: "That's too generic. Give me a concrete example."
-         - If they are wrong, correct them immediately.
+4. **Strictness Level: ${difficulty}**
+   - If they give vague answers, push for specifics.
+   - If they are wrong, correct them.
 
-      4. **Response Format:**
-         - Keep it **short (2-3 sentences max)**. This is a voice conversation.
-         - Current Difficulty: ${difficulty}
-      
-      --- LANGUAGE ---
-      ${languageInstruction}
+5. **Response Format:**
+   - Keep responses short (2-3 sentences max). This is a voice conversation.
+   - Be conversational and natural.
+   - Do NOT use markdown formatting, bullet points, or code blocks in your responses.
+   - Speak as if you're talking to someone face-to-face.
 
-      If the user says "Hello" or "Start", introduce yourself as ${persona.name}, mention a specific project you found interesting in their resume, and ask a deep technical question about it immediately.
-    `;
+6. **Style:** ${persona.style}
+7. **Tone:** ${persona.tone}
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const messages: any[] = [{ role: "system", content: systemPrompt }];
+If the user says "Hello" or "Start", introduce yourself as ${persona.name}, mention something specific from their resume, and ask a targeted technical question.
+`;
 
-    // Inject History
+    const model = genAI.getGenerativeModel({
+      model: process.env.GEMINI_MODEL || "gemini-2.0-flash-lite",
+    });
+
+    const chatHistory: { role: "user" | "model"; parts: { text: string }[] }[] = [];
+
     if (history && Array.isArray(history)) {
       history.forEach((msg) => {
-        messages.push({
-          role: msg.role === "user" ? "user" : "assistant",
-          content: msg.text,
+        chatHistory.push({
+          role: msg.role === "user" ? "user" : "model",
+          parts: [{ text: msg.text }],
         });
       });
     }
 
-    messages.push({ role: "user", content: message });
-
-    // AI Call
-    const completion = await groq.chat.completions.create({
-      messages: messages,
-      model: "llama-3.3-70b-versatile", // Using the smartest model for deep reasoning
-      temperature: 0.5, // Slightly lower temp for more focused/professional answers
-      max_tokens: 200,
+    const chat = model.startChat({
+      history: chatHistory,
+      systemInstruction: systemPrompt,
     });
 
-    const aiText = completion.choices[0]?.message?.content || "Server Error.";
+    const result = await chat.sendMessage(message);
+    const aiText = result.response.text() || "I'm sorry, could you repeat that?";
 
-    res.json({ reply: aiText });
+    res.json({ reply: aiText, persona: persona.name, gender: persona.gender });
   } catch (error: unknown) {
-    console.error("❌ Critical Chat Error:", (error as Error).message);
-    res
-      .status(500)
-      .json({ error: "AI Service Failed", details: (error as Error).message });
+    console.error("Chat error:", (error as Error).message);
+    res.status(500).json({
+      error: "AI Service Failed",
+      details: (error as Error).message,
+    });
   }
 });
 

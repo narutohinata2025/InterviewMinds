@@ -1,241 +1,157 @@
 import express from "express";
-import { InterviewModel } from "../models/Interview";
-import { requireAuth } from "../middleware/auth";
-import Groq from "groq-sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { v4 as uuidv4 } from "uuid";
 import dotenv from "dotenv";
-import { uploadMiddleware } from "../middleware/upload"; // ✅ Use Cloudinary Middleware
 
 dotenv.config();
 
 const router = express.Router();
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-// ============================================================================
-// 1. END INTERVIEW & GENERATE REPORT (Weighted Ensemble Scoring 🧠)
-// ============================================================================
-interface AuthenticatedRequest extends express.Request {
-  user?: { userId: string };
-  auth?: { userId: string };
-}
-
-interface EndInterviewRequest {
+interface InterviewRecord {
+  id: string;
   resumeId: string;
-  history: { role: string; text: string }[];
+  messages: { role: string; text: string }[];
+  score: number;
+  feedback: string;
+  metrics: { subject: string; A: number; fullMark: number }[];
+  strengths: string[];
+  improvements: string[];
+  createdAt: Date;
 }
 
-// ============================================================================
-// 1. END INTERVIEW & GENERATE REPORT (Weighted Ensemble Scoring 🧠)
-// ============================================================================
-router.post(
-  "/end",
-  requireAuth,
-  async (req: express.Request, res: express.Response) => {
-    try {
-      const { resumeId, history } = req.body as EndInterviewRequest;
-      const authReq = req as AuthenticatedRequest;
-      const userId = authReq.user?.userId || authReq.auth?.userId;
+const interviewStore = new Map<string, InterviewRecord>();
 
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+router.post("/end", async (req: express.Request, res: express.Response) => {
+  try {
+    const { resumeId, history } = req.body;
 
-      // 1. Basic Validation
-      if (!history || history.length === 0) {
-        return res.status(400).json({ error: "No conversation to analyze" });
-      }
+    if (!history || history.length === 0) {
+      return res.status(400).json({ error: "No conversation to analyze" });
+    }
 
-      // 2. Check if user actually answered
-      const userMessageCount = history.filter(
-        (msg) => msg.role === "user",
-      ).length;
+    const userMessageCount = history.filter(
+      (msg: { role: string }) => msg.role === "user",
+    ).length;
 
-      // 🛑 EARLY EXIT: Zero Score if no interaction
-      if (userMessageCount === 0) {
-        const emptyData = {
-          score: 0,
-          feedback: "Interview terminated early. No answers provided.",
-          metrics: [
-            { subject: "Content Quality", A: 0, fullMark: 100 },
-            { subject: "Communication Skills", A: 0, fullMark: 100 },
-            { subject: "Behavioral Indicators", A: 0, fullMark: 100 },
-            { subject: "Domain Expertise", A: 0, fullMark: 100 },
-          ],
-        };
+    const emptyMetrics = [
+      { subject: "Technical Knowledge", A: 0, fullMark: 100 },
+      { subject: "Communication Skills", A: 0, fullMark: 100 },
+      { subject: "Problem Solving", A: 0, fullMark: 100 },
+      { subject: "Code Quality", A: 0, fullMark: 100 },
+      { subject: "Job Fit", A: 0, fullMark: 100 },
+    ];
 
-        const newInterview = new InterviewModel({
-          userId,
-          resumeId,
-          messages: history,
-          score: emptyData.score,
-          feedback: emptyData.feedback,
-          metrics: emptyData.metrics,
-          createdAt: new Date(),
-        });
-
-        await newInterview.save();
-        return res.json({
-          id: newInterview._id,
-          score: 0,
-          metrics: emptyData.metrics,
-        });
-      }
-
-      // 3. AI Analysis (Weighted Ensemble Logic)
-      const systemPrompt = `
-      You are an expert Technical Interview Evaluator.
-      Analyze the provided interview transcript based ONLY on the candidate's answers.
-      
-      --- SCORING CRITERIA (WEIGHTED ENSEMBLE) ---
-      Evaluate based on these 4 strict parameters:
-      1. **Content Quality (40%)**: Accuracy of technical answers, code logic, and correctness.
-      2. **Communication Skills (30%)**: Clarity, articulation, and language flow (English/Hinglish).
-      3. **Behavioral Indicators (20%)**: Confidence, honesty about gaps, and problem-solving approach.
-      4. **Domain Expertise (10%)**: Depth of knowledge in the specific tech stack (React, Node, etc.).
-
-      --- OUTPUT REQUIREMENTS ---
-      1. Return a **STRICT JSON** object.
-      2. Calculate the 'score' as a weighted average: (Content*0.4 + Comm*0.3 + Behavior*0.2 + Domain*0.1).
-      3. Structure must match exactly:
-      {
-        "score": number (0-100),
-        "feedback": "string (concise summary of performance, mentioning strengths and weak areas)",
-        "skills": [
-          { "subject": "Content Quality", "A": number (0-100), "fullMark": 100 },
-          { "subject": "Communication Skills", "A": number (0-100), "fullMark": 100 },
-          { "subject": "Behavioral Indicators", "A": number (0-100), "fullMark": 100 },
-          { "subject": "Domain Expertise", "A": number (0-100), "fullMark": 100 }
-        ]
-      }
-    `;
-
-      // Format chat for AI
-      const conversationText = history
-        .map((msg) => `${msg.role}: ${msg.text}`)
-        .join("\n");
-
-      const completion = await groq.chat.completions.create({
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: conversationText },
-        ],
-        model: "llama-3.3-70b-versatile",
-        temperature: 0.2, // Low temp for consistent JSON
-        response_format: { type: "json_object" },
-      });
-
-      const aiResponse = JSON.parse(
-        completion.choices[0]?.message?.content || "{}",
-      );
-
-      // Default fallback if AI fails partial parsing
-      const finalData = {
-        score: aiResponse.score || 0,
-        feedback: aiResponse.feedback || "Analysis incomplete.",
-        metrics: aiResponse.skills || [
-          { subject: "Content Quality", A: 0, fullMark: 100 },
-          { subject: "Communication Skills", A: 0, fullMark: 100 },
-          { subject: "Behavioral Indicators", A: 0, fullMark: 100 },
-          { subject: "Domain Expertise", A: 0, fullMark: 100 },
-        ],
-      };
-
-      // 4. Save to Database
-      const interview = new InterviewModel({
-        userId,
+    if (userMessageCount === 0) {
+      const id = uuidv4();
+      const record: InterviewRecord = {
+        id,
         resumeId,
         messages: history,
-        score: finalData.score,
-        feedback: finalData.feedback,
-        metrics: finalData.metrics,
+        score: 0,
+        feedback: "Interview terminated early. No answers were provided.",
+        metrics: emptyMetrics,
+        strengths: [],
+        improvements: ["Complete the interview to receive feedback"],
         createdAt: new Date(),
-      });
-
-      await interview.save();
-
-      res.json({
-        id: interview._id,
-        score: interview.score,
-        metrics: interview.metrics,
-      });
-    } catch (error: unknown) {
-      console.error("Feedback Generation Error:", (error as Error).message);
-      res.status(500).json({ error: "Failed to generate report" });
+      };
+      interviewStore.set(id, record);
+      return res.json({ id, score: 0, metrics: emptyMetrics });
     }
-  },
-);
 
-// ============================================================================
-// 2. GET USER HISTORY (DASHBOARD)
-// ============================================================================
-router.get(
-  "/history",
-  requireAuth,
-  async (req: express.Request, res: express.Response) => {
-    try {
-      const authReq = req as AuthenticatedRequest;
-      const userId = authReq.user?.userId || authReq.auth?.userId;
+    const systemPrompt = `
+You are an expert Technical Interview Evaluator.
+Analyze the provided interview transcript based ONLY on the candidate's answers.
 
-      const interviews = await InterviewModel.find({ userId })
-        .select("score feedback createdAt metrics")
-        .sort({ createdAt: -1 });
+--- SCORING CRITERIA (WEIGHTED) ---
+1. **Technical Knowledge (30%)**: Accuracy of technical answers, understanding of concepts.
+2. **Communication Skills (20%)**: Clarity, articulation, and structured responses.
+3. **Problem Solving (25%)**: Approach to problems, debugging, and logical thinking.
+4. **Code Quality (15%)**: If coding was involved - correctness, efficiency, and clean code.
+5. **Job Fit (10%)**: Alignment with role requirements and cultural fit indicators.
 
-      res.json(interviews);
-    } catch (error: unknown) {
-      console.error("History Fetch Error:", (error as Error).message);
-      res.status(500).json({ error: "Failed to fetch history" });
-    }
-  },
-);
+--- OUTPUT REQUIREMENTS ---
+Return ONLY a valid JSON object with this exact structure:
+{
+  "score": number (0-100, weighted average),
+  "feedback": "string (2-3 paragraph detailed summary of performance)",
+  "skills": [
+    { "subject": "Technical Knowledge", "A": number (0-100), "fullMark": 100 },
+    { "subject": "Communication Skills", "A": number (0-100), "fullMark": 100 },
+    { "subject": "Problem Solving", "A": number (0-100), "fullMark": 100 },
+    { "subject": "Code Quality", "A": number (0-100), "fullMark": 100 },
+    { "subject": "Job Fit", "A": number (0-100), "fullMark": 100 }
+  ],
+  "strengths": ["strength 1", "strength 2", "strength 3"],
+  "improvements": ["area 1", "area 2", "area 3"]
+}
+`;
 
-// ============================================================================
-// 3. GET INTERVIEW DETAILS (FEEDBACK PAGE)
-// ============================================================================
-router.get(
-  "/:id",
-  requireAuth,
-  async (req: express.Request, res: express.Response) => {
-    try {
-      const interview = await InterviewModel.findById(req.params.id);
-      if (!interview)
-        return res.status(404).json({ error: "Interview not found" });
+    const conversationText = history
+      .map((msg: { role: string; text: string }) => `${msg.role}: ${msg.text}`)
+      .join("\n");
 
-      res.json(interview);
-    } catch (error) {
-      console.error("Fetch Error:", error);
-      res.status(500).json({ error: "Server Error" });
-    }
-  },
-);
+    const model = genAI.getGenerativeModel({
+      model: process.env.GEMINI_MODEL || "gemini-2.0-flash-lite",
+      generationConfig: {
+        responseMimeType: "application/json",
+        temperature: 0.2,
+      },
+    });
 
-// ============================================================================
-// 4. UPLOAD VIDEO (CLOUDINARY ☁️)
-// ============================================================================
-router.post(
-  "/upload-video",
-  requireAuth,
-  uploadMiddleware.single("video"),
-  async (req: express.Request, res: express.Response) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No video file provided" });
-      }
+    const result = await model.generateContent([
+      { text: systemPrompt },
+      { text: conversationText },
+    ]);
 
-      const { interviewId } = req.body as { interviewId: string };
-      const videoUrl = req.file.path; // Cloudinary URL
+    const aiResponse = JSON.parse(result.response.text() || "{}");
 
-      await InterviewModel.findByIdAndUpdate(interviewId, {
-        videoUrl: videoUrl,
-      });
+    const finalData = {
+      score: aiResponse.score || 0,
+      feedback: aiResponse.feedback || "Analysis could not be completed.",
+      metrics: aiResponse.skills || emptyMetrics,
+      strengths: aiResponse.strengths || [],
+      improvements: aiResponse.improvements || [],
+    };
 
-      res.json({
-        message: "Video uploaded successfully",
-        url: videoUrl,
-      });
-    } catch (error) {
-      console.error("Cloud Upload Error:", error);
-      res.status(500).json({ error: "Video upload failed" });
-    }
-  },
-);
+    const id = uuidv4();
+    const record: InterviewRecord = {
+      id,
+      resumeId: resumeId || "",
+      messages: history,
+      score: finalData.score,
+      feedback: finalData.feedback,
+      metrics: finalData.metrics,
+      strengths: finalData.strengths,
+      improvements: finalData.improvements,
+      createdAt: new Date(),
+    };
+
+    interviewStore.set(id, record);
+
+    res.json({
+      id,
+      score: finalData.score,
+      feedback: finalData.feedback,
+      metrics: finalData.metrics,
+      strengths: finalData.strengths,
+      improvements: finalData.improvements,
+    });
+  } catch (error: unknown) {
+    console.error("Interview end error:", (error as Error).message);
+    res.status(500).json({
+      error: "Failed to analyze interview",
+      details: (error as Error).message,
+    });
+  }
+});
+
+router.get("/:id", (req: express.Request, res: express.Response) => {
+  const record = interviewStore.get(req.params.id);
+  if (!record) {
+    return res.status(404).json({ error: "Interview not found" });
+  }
+  res.json(record);
+});
 
 export default router;

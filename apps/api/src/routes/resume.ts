@@ -1,123 +1,64 @@
 import express from "express";
 import multer from "multer";
-import { ResumeModel } from "../models/Resume";
-import PDFParser from "pdf2json";
-import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { requireAuth } from "../middleware/auth";
-import { pipeline } from "@xenova/transformers"; // ✅ Local AI Import
-import dotenv from "dotenv";
-
-dotenv.config();
-
-interface AuthenticatedRequest extends express.Request {
-  auth?: { userId: string };
-  file?: Express.Multer.File;
-}
+import pdfParse from "pdf-parse";
+import { v4 as uuidv4 } from "uuid";
 
 const router = express.Router();
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-// ✅ Singleton Pattern for Model Loading (Taaki baar-baar load na ho)
-class EmbeddingService {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static pipeline: any = null;
-
-  static async getPipeline() {
-    if (!this.pipeline) {
-      // console.log("📥 Loading Local Embedding Model (First time only)...");
-      // 'Xenova/all-MiniLM-L6-v2' ek super-lightweight model hai (sirf ~40MB)
-      this.pipeline = await pipeline(
-        "feature-extraction",
-        "Xenova/all-MiniLM-L6-v2",
-      );
-    }
-    return this.pipeline;
-  }
+interface ResumeRecord {
+  id: string;
+  fileName: string;
+  content: string;
+  jobDescription: string;
+  uploadedAt: Date;
 }
+
+const resumeStore = new Map<string, ResumeRecord>();
 
 router.post(
   "/upload",
-  requireAuth,
   upload.single("resume"),
   async (req: express.Request, res: express.Response) => {
     try {
-      const authReq = req as AuthenticatedRequest;
-      const userId = authReq.auth?.userId;
-
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
       }
 
-      // 1. PDF Parse
-      // 1. PDF Parse
-      const pdfParser = new PDFParser(null, 1);
-      const rawText: string = await new Promise((resolve, reject) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        pdfParser.on("pdfParser_dataError", (errData: any) =>
-          reject(errData.parserError),
-        );
-        pdfParser.on("pdfParser_dataReady", () =>
-          resolve(pdfParser.getRawTextContent()),
-        );
-        pdfParser.parseBuffer(req.file!.buffer);
-      });
+      const jobDescription = req.body.jobDescription || "";
 
-      const cleanText = rawText.replace(/----------------/g, " ").trim();
+      const pdfData = await pdfParse(req.file.buffer);
+      const cleanText = pdfData.text
+        .replace(/\s+/g, " ")
+        .replace(/----------------/g, " ")
+        .trim();
 
-      if (!cleanText || cleanText.length < 50) {
-        throw new Error("Failed to extract sufficient text from PDF.");
+      if (!cleanText || cleanText.length < 30) {
+        return res
+          .status(400)
+          .json({ error: "Could not extract text from PDF. Please try another file." });
       }
 
-      // 2. CHUNKING
-      const splitter = new RecursiveCharacterTextSplitter({
-        chunkSize: 500,
-        chunkOverlap: 50,
-      });
-
-      const outputChunks = await splitter.createDocuments([cleanText]);
-
-      // 3. EMBEDDINGS (Local Execution)
-
-      const extractor = await EmbeddingService.getPipeline();
-      const chunksWithEmbeddings = [];
-
-      for (const chunk of outputChunks) {
-        // Local Model Inference
-        const output = await extractor(chunk.pageContent, {
-          pooling: "mean",
-          normalize: true,
-        });
-        // Output Tensor se Array convert karna
-        const vector = Array.from(output.data);
-
-        if (vector && vector.length > 0) {
-          chunksWithEmbeddings.push({
-            text: chunk.pageContent,
-            embedding: vector,
-          });
-        }
-      }
-
-      // console.log(
-      //   `✅ Success! Generated ${chunksWithEmbeddings.length} vectors.`,
-      // );
-
-      // 4. Save to MongoDB
-      const newResume = await ResumeModel.create({
-        userId: userId,
+      const id = uuidv4();
+      const record: ResumeRecord = {
+        id,
         fileName: req.file.originalname,
         content: cleanText,
-        chunks: chunksWithEmbeddings,
-      });
+        jobDescription,
+        uploadedAt: new Date(),
+      };
+
+      resumeStore.set(id, record);
 
       res.json({
         message: "Resume processed successfully!",
-        id: newResume._id,
-        previewText: cleanText.substring(0, 100) + "...",
+        id,
+        previewText: cleanText.substring(0, 200) + "...",
+        jobDescription: jobDescription.substring(0, 200),
       });
     } catch (error: unknown) {
-      console.error("❌ Critical Error:", error);
+      console.error("Resume processing error:", (error as Error).message);
       res.status(500).json({
         error: "Failed to process resume",
         details: (error as Error).message,
@@ -126,4 +67,13 @@ router.post(
   },
 );
 
+router.get("/:id", (req: express.Request, res: express.Response) => {
+  const record = resumeStore.get(req.params.id);
+  if (!record) {
+    return res.status(404).json({ error: "Resume not found" });
+  }
+  res.json(record);
+});
+
+export { resumeStore };
 export default router;

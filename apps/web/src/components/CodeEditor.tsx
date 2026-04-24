@@ -17,9 +17,9 @@ interface CodeEditorProps {
   setLanguage: (value: string) => void;
 }
 
-// 🎨 Supported Languages Configuration
 const LANGUAGES = [
-  { id: "javascript", name: "JavaScript (Node.js)" },
+  { id: "javascript", name: "JavaScript" },
+  { id: "typescript", name: "TypeScript" },
   { id: "python", name: "Python 3" },
   { id: "java", name: "Java" },
   { id: "cpp", name: "C++" },
@@ -31,16 +31,9 @@ export default function CodeEditor({
   language,
   setLanguage,
 }: CodeEditorProps) {
-  // Reset Code Helper
-  const handleReset = () => {
-    setCode("// Write your code here...");
-  };
-
   return (
     <div className="flex flex-col h-full bg-[#1e1e1e] border-l border-white/10">
-      {/* 🛠️ EDITOR TOOLBAR */}
       <div className="flex items-center justify-between px-4 py-2 bg-[#252526] border-b border-white/10 shrink-0">
-        {/* Left: Title & Language Selector */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 text-blue-400">
             <Code2 className="w-4 h-4" />
@@ -67,44 +60,41 @@ export default function CodeEditor({
           </Select>
         </div>
 
-        {/* Right: Actions & Status */}
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleReset}
+            onClick={() => setCode("// Write your code here...\n")}
             className="h-6 w-6 text-slate-500 hover:text-white hover:bg-slate-700"
             title="Reset Code"
           >
             <RotateCcw className="w-3 h-3" />
           </Button>
-
           <Badge
             variant="outline"
-            className="border-green-500/30 text-green-400 text-[10px] px-2 h-5 bg-green-500/10 hidden sm:flex"
+            className="border-green-500/30 text-green-400 text-[10px] px-2 h-5 bg-green-500/10"
           >
-            Auto-Save On
+            Ready
           </Badge>
         </div>
       </div>
 
-      {/* 📝 MONACO EDITOR ENGINE */}
       <div className="flex-1 overflow-hidden relative">
         <Editor
           height="100%"
           language={language}
           value={code}
-          theme="vs-dark" // Professional Dark Theme
+          theme="vs-dark"
           onChange={(value) => setCode(value)}
           options={{
-            minimap: { enabled: false }, // Clean look
+            minimap: { enabled: false },
             fontSize: 14,
             fontFamily: "'Fira Code', 'JetBrains Mono', 'Consolas', monospace",
             lineNumbers: "on",
             roundedSelection: false,
             scrollBeyondLastLine: false,
             readOnly: false,
-            automaticLayout: true, // Auto-resize handle karega
+            automaticLayout: true,
             cursorBlinking: "smooth",
             smoothScrolling: true,
             padding: { top: 16 },

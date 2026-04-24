@@ -1,10 +1,8 @@
 import express from "express";
 import axios from "axios";
-import { requireAuth } from "../middleware/auth";
 
 const router = express.Router();
 
-// Supported Languages & Versions (Piston API map)
 const LANGUAGE_MAP: Record<string, string> = {
   javascript: "18.15.0",
   typescript: "5.0.3",
@@ -16,38 +14,32 @@ const LANGUAGE_MAP: Record<string, string> = {
   rust: "1.68.2",
 };
 
-router.post("/execute", requireAuth, async (req, res) => {
+router.post("/execute", async (req: express.Request, res: express.Response) => {
   const { language, code } = req.body;
 
   if (!language || !code) {
-    return res.status(400).json({ error: "Language and Code are required" });
+    return res.status(400).json({ error: "Language and code are required" });
   }
 
-  // Language check
   const version = LANGUAGE_MAP[language];
   if (!version) {
     return res.status(400).json({ error: "Unsupported language" });
   }
 
   try {
-    // Piston API ko code bhejo
     const response = await axios.post(
       "https://emkc.org/api/v2/piston/execute",
       {
-        language: language,
-        version: version,
-        files: [
-          {
-            content: code,
-          },
-        ],
+        language,
+        version,
+        files: [{ content: code }],
       },
+      { timeout: 15000 },
     );
 
-    // Piston ka result wapas bhejo
     res.json(response.data);
   } catch (error: unknown) {
-    console.error("Compiler Error:", (error as Error).message);
+    console.error("Compiler error:", (error as Error).message);
     res.status(500).json({
       error: "Failed to execute code",
       details: (error as Error).message,
