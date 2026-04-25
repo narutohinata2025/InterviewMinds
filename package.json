@@ -1,30 +1,16 @@
 {
-  "name": "interview-minds",
+  "name": "ai-interview-pro",
+  "version": "1.0.0",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "description": "Production-grade AI Interview Platform with Live2D Avatar",
   "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
-    "lint": "turbo run lint"
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd backend && npm run build && cd ../frontend && npm run build",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install"
   },
   "devDependencies": {
-    "prettier": "^3.0.0",
-    "turbo": "latest"
-  },
-  "packageManager": "npm@10.2.0",
-  "engines": {
-    "node": ">=18"
-  },
-  "overrides": {
-    "lodash": "^4.17.21",
-    "node-fetch": "^2.7.0",
-    "qs": "^6.13.0",
-    "diff": "^5.2.0",
-    "multer-storage-cloudinary": {
-      "cloudinary": "^2.7.0"
-    }
+    "concurrently": "^8.2.2"
   }
 }
