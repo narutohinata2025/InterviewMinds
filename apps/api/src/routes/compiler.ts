@@ -33,7 +33,10 @@ router.post("/execute", async (req: express.Request, res: express.Response) => {
         source_code: code,
         language_id: languageId,
       },
-      { timeout: 30000 },
+      {
+        timeout: 30000,
+        headers: { "Content-Type": "application/json" },
+      },
     );
 
     const data = response.data;

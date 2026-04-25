@@ -46,6 +46,7 @@ export default function InterviewPage() {
   const hasInitialized = useRef(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<Message[]>([]);
 
   const {
     isListening,
@@ -106,8 +107,15 @@ export default function InterviewPage() {
     setIsLoading(true);
 
     const resumeId = localStorage.getItem("resumeId");
-    setMessages((prev) => [...prev, { role: "user", content: trimmedMsg }]);
+    const currentHistory = messagesRef.current.map((m) => ({
+      role: m.role === "ai" ? "model" : "user",
+      text: m.content,
+    }));
+
+    // Track init prompt in ref for API history but don't show in UI
+    messagesRef.current = [...messagesRef.current, { role: "user", content: trimmedMsg }];
     if (!isInit) {
+      setMessages((prev) => [...prev, { role: "user", content: trimmedMsg }]);
       setInput("");
       setTranscript("");
     }
@@ -116,14 +124,12 @@ export default function InterviewPage() {
       const res = await api.post("/chat", {
         message: trimmedMsg,
         resumeId,
-        history: messages.map((m) => ({
-          role: m.role === "ai" ? "model" : "user",
-          text: m.content,
-        })),
+        history: currentHistory,
         mode: persona,
         difficulty,
       });
       const aiReply = res.data.reply;
+      messagesRef.current = [...messagesRef.current, { role: "ai", content: aiReply }];
       setMessages((prev) => [...prev, { role: "ai", content: aiReply }]);
       speak(aiReply, getCurrentGender());
     } catch {
@@ -229,7 +235,7 @@ export default function InterviewPage() {
       const resumeId = localStorage.getItem("resumeId");
       const res = await api.post("/interview/end", {
         resumeId,
-        history: messages.map((m) => ({
+        history: messagesRef.current.map((m) => ({
           role: m.role === "ai" ? "model" : "user",
           text: m.content,
         })),
@@ -312,7 +318,7 @@ export default function InterviewPage() {
             variant="destructive"
             size="sm"
             onClick={endInterview}
-            disabled={!isInterviewStarted || messages.length < 2}
+            disabled={!isInterviewStarted || messages.length < 1}
             className="gap-1"
           >
             <PhoneOff className="w-4 h-4" />
