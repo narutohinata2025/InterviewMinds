@@ -48,7 +48,7 @@ export default function UserCamera({ onStreamReady }: UserCameraProps) {
             alignItems: "center",
             justifyContent: "center",
             height: "100%",
-            color: "var(--text-muted)",
+            color: "var(--text-tertiary)",
             fontSize: "14px",
           }}
         >
@@ -63,7 +63,7 @@ export default function UserCamera({ onStreamReady }: UserCameraProps) {
           REC
         </div>
         {hasPermission && (
-          <div className="camera-badge" style={{ color: "var(--accent-green)" }}>
+          <div className="camera-badge" style={{ color: "var(--success)" }}>
             LIVE
           </div>
         )}

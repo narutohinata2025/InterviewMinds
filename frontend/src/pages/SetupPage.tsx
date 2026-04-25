@@ -104,7 +104,7 @@ export default function SetupPage() {
 
       <div className="setup-grid">
         {/* Left — Persona Selection */}
-        <div className="setup-section glass-panel">
+        <div className="setup-section panel">
           <h2>🎭 Interviewer Persona</h2>
           <div className="persona-grid">
             {PERSONAS.map((p) => (
@@ -123,7 +123,7 @@ export default function SetupPage() {
         </div>
 
         {/* Right — Settings */}
-        <div className="setup-section glass-panel">
+        <div className="setup-section panel">
           <h2>⚡ Interview Settings</h2>
 
           <div style={{ marginBottom: "24px" }}>

@@ -68,13 +68,13 @@ export default function FeedbackPage() {
 
       <div className="feedback-grid">
         {/* Score Circle */}
-        <div className="score-circle-container glass-panel">
+        <div className="score-circle-container panel">
           <div className="score-circle">
             <svg width="180" height="180" viewBox="0 0 180 180">
               <defs>
                 <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#7c3aed" />
-                  <stop offset="100%" stopColor="#06b6d4" />
+                  <stop offset="0%" stopColor="#C4673A" />
+                  <stop offset="100%" stopColor="#D4733F" />
                 </linearGradient>
               </defs>
               <circle className="score-circle-bg" cx="90" cy="90" r="80" />
@@ -105,26 +105,26 @@ export default function FeedbackPage() {
         </div>
 
         {/* Radar Chart */}
-        <div className="radar-container glass-panel">
+        <div className="radar-container panel">
           <ResponsiveContainer width="100%" height={300}>
             <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
-              <PolarGrid stroke="rgba(255,255,255,0.1)" />
+              <PolarGrid stroke="rgba(120, 100, 75, 0.15)" />
               <PolarAngleAxis
                 dataKey="metric"
-                tick={{ fill: "#94a3b8", fontSize: 12 }}
+                tick={{ fill: "#6B5F4E", fontSize: 12 }}
               />
               <PolarRadiusAxis
                 angle={90}
                 domain={[0, 10]}
-                tick={{ fill: "#64748b", fontSize: 10 }}
+                tick={{ fill: "#9C8E7A", fontSize: 10 }}
                 tickCount={6}
               />
               <Radar
                 name="Score"
                 dataKey="value"
-                stroke="#7c3aed"
-                fill="#7c3aed"
-                fillOpacity={0.3}
+                stroke="#C4673A"
+                fill="#C4673A"
+                fillOpacity={0.15}
                 strokeWidth={2}
               />
             </RadarChart>
@@ -132,7 +132,7 @@ export default function FeedbackPage() {
         </div>
 
         {/* Strengths */}
-        <div className="feedback-list strengths glass-panel">
+        <div className="feedback-list strengths panel">
           <h2>💪 Strengths</h2>
           <ul>
             {feedback.strengths.map((s, i) => (
@@ -142,7 +142,7 @@ export default function FeedbackPage() {
         </div>
 
         {/* Improvements */}
-        <div className="feedback-list improvements glass-panel">
+        <div className="feedback-list improvements panel">
           <h2>📈 Areas for Improvement</h2>
           <ul>
             {feedback.improvements.map((s, i) => (
@@ -152,14 +152,14 @@ export default function FeedbackPage() {
         </div>
 
         {/* Summary */}
-        <div className="feedback-summary glass-panel">
+        <div className="feedback-summary panel">
           <h2>📝 AI Assessment</h2>
           <p style={{ marginBottom: "16px" }}>{feedback.summary}</p>
           <p>{feedback.detailedFeedback}</p>
         </div>
 
         {/* Transcript */}
-        <div className="transcript-section glass-panel">
+        <div className="transcript-section panel">
           <h2>📜 Full Transcript</h2>
           {history.map((msg, i) => (
             <div

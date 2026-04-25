@@ -74,7 +74,7 @@ export default function LandingPage() {
       </div>
 
       <div
-        className={`upload-area glass-panel ${dragOver ? "drag-over" : ""} ${file ? "has-file" : ""}`}
+        className={`upload-area ${dragOver ? "drag-over" : ""} ${file ? "has-file" : ""}`}
         onClick={() => fileInputRef.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
@@ -89,7 +89,7 @@ export default function LandingPage() {
             : "Drop your resume here or click to browse"}
         </h3>
         <p>{file ? "Resume uploaded successfully!" : "PDF files only, max 10MB"}</p>
-        {error && <p style={{ color: "var(--accent-red)", marginTop: "8px" }}>{error}</p>}
+        {error && <p style={{ color: "var(--danger)", marginTop: "8px" }}>{error}</p>}
         <input
           ref={fileInputRef}
           type="file"
@@ -102,7 +102,7 @@ export default function LandingPage() {
       </div>
 
       <div className="feature-grid">
-        <div className="feature-card glass-panel">
+        <div className="feature-card">
           <div className="feature-card-icon">🤖</div>
           <h3>Live2D AI Avatar</h3>
           <p>
@@ -110,7 +110,7 @@ export default function LandingPage() {
             and natural expressions powered by Live2D Cubism SDK.
           </p>
         </div>
-        <div className="feature-card glass-panel">
+        <div className="feature-card">
           <div className="feature-card-icon">🎤</div>
           <h3>Voice-First Interview</h3>
           <p>
@@ -118,7 +118,7 @@ export default function LandingPage() {
             automatically captures your answers in real-time.
           </p>
         </div>
-        <div className="feature-card glass-panel">
+        <div className="feature-card">
           <div className="feature-card-icon">💻</div>
           <h3>Live Code Editor</h3>
           <p>
@@ -126,7 +126,7 @@ export default function LandingPage() {
             and real-time code execution across 5+ languages.
           </p>
         </div>
-        <div className="feature-card glass-panel">
+        <div className="feature-card">
           <div className="feature-card-icon">📊</div>
           <h3>Detailed Analytics</h3>
           <p>

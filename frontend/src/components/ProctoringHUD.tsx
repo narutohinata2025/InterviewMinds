@@ -10,32 +10,35 @@ export default function ProctoringHUD({
   duration,
 }: ProctoringHUDProps) {
   return (
-    <div className="interview-controls">
-      <div className="interview-timer">{duration}</div>
-      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        <div
-          className="camera-badge"
+    <>
+      <span className="interview-timer">{duration}</span>
+      <span
+        style={{
+          fontSize: "11px",
+          fontWeight: 600,
+          padding: "3px 8px",
+          borderRadius: "4px",
+          background: isTabVisible ? "var(--success-bg)" : "var(--danger-bg)",
+          color: isTabVisible ? "var(--success)" : "var(--danger)",
+          letterSpacing: "0.02em",
+        }}
+      >
+        {isTabVisible ? "Focused" : "Tab switched"}
+      </span>
+      {tabSwitchCount > 0 && (
+        <span
           style={{
-            background: isTabVisible ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
-            border: `1px solid ${isTabVisible ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"}`,
-            color: isTabVisible ? "var(--accent-green)" : "var(--accent-red)",
+            fontSize: "11px",
+            fontWeight: 600,
+            padding: "3px 8px",
+            borderRadius: "4px",
+            background: "var(--danger-bg)",
+            color: "var(--danger)",
           }}
         >
-          {isTabVisible ? "Focused" : "Tab switched!"}
-        </div>
-        {tabSwitchCount > 0 && (
-          <div
-            className="camera-badge"
-            style={{
-              background: "rgba(239, 68, 68, 0.15)",
-              border: "1px solid rgba(239, 68, 68, 0.3)",
-              color: "var(--accent-red)",
-            }}
-          >
-            {tabSwitchCount} switch{tabSwitchCount > 1 ? "es" : ""}
-          </div>
-        )}
-      </div>
-    </div>
+          {tabSwitchCount} switch{tabSwitchCount > 1 ? "es" : ""}
+        </span>
+      )}
+    </>
   );
 }

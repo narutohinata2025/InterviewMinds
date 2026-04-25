@@ -48,9 +48,9 @@ export default function CodeEditor({ onClose }: CodeEditorProps) {
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
             style={{
-              background: "var(--bg-glass)",
-              color: "var(--text-primary)",
-              border: "1px solid var(--border-glass)",
+              background: "#2D2D2D",
+              color: "#CCC",
+              border: "1px solid rgba(255,255,255,0.1)",
               borderRadius: "6px",
               padding: "4px 8px",
               fontSize: "12px",

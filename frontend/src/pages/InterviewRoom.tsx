@@ -35,7 +35,6 @@ export default function InterviewRoom() {
     },
   });
 
-  // Set model for lip-sync when avatar loads
   useEffect(() => {
     const interval = setInterval(() => {
       const model = avatarRef.current?.getModel();
@@ -63,7 +62,6 @@ export default function InterviewRoom() {
         setMessages([...messagesRef.current]);
         setIsThinking(false);
 
-        // Speak the response with lip-sync
         speech.pauseForAI();
         await lipSync.speak(reply);
       } catch (error) {
@@ -81,21 +79,20 @@ export default function InterviewRoom() {
     enabled: true,
   });
 
-  // Start VAD and send initial greeting
+  // Auto-start everything on room entry — no manual controls
   useEffect(() => {
     if (!sessionId) {
       navigate("/");
       return;
     }
 
-    // Load voices
     window.speechSynthesis?.getVoices();
 
     const startInterview = async () => {
-      // Start listening
+      // Auto-start mic + VAD immediately
       await speech.start();
 
-      // Send initial greeting
+      // Send initial greeting automatically
       try {
         speech.pauseForAI();
         setIsThinking(true);
@@ -112,8 +109,7 @@ export default function InterviewRoom() {
       }
     };
 
-    // Small delay for avatar to load
-    setTimeout(startInterview, 2000);
+    setTimeout(startInterview, 1500);
   }, [sessionId]);
 
   const handleEndInterview = useCallback(async () => {
@@ -125,7 +121,6 @@ export default function InterviewRoom() {
 
     try {
       const result = await endInterview(sessionId);
-      // Store result for feedback page
       sessionStorage.setItem("interviewResult", JSON.stringify(result));
       navigate("/feedback");
     } catch (error) {
@@ -133,6 +128,12 @@ export default function InterviewRoom() {
       setIsEnding(false);
     }
   }, [sessionId, navigate, speech, lipSync]);
+
+  const lastAiMessage =
+    messagesRef.current.length > 0 &&
+    messagesRef.current[messagesRef.current.length - 1]?.role === "assistant"
+      ? messagesRef.current[messagesRef.current.length - 1].content
+      : "";
 
   return (
     <div className="interview-room">
@@ -152,18 +153,17 @@ export default function InterviewRoom() {
 
         <Live2DAvatar ref={avatarRef} isSpeaking={isAISpeaking} />
 
-        {/* Speech bubble showing latest AI message */}
-        {isAISpeaking && messagesRef.current.length > 0 && (
+        <div className={`avatar-glow ${isAISpeaking ? "speaking" : ""}`} />
+
+        {isAISpeaking && lastAiMessage && (
           <div className="speech-bubble">
-            {messagesRef.current[messagesRef.current.length - 1]?.role === "assistant"
-              ? messagesRef.current[messagesRef.current.length - 1].content.substring(0, 150) +
-                (messagesRef.current[messagesRef.current.length - 1].content.length > 150 ? "..." : "")
-              : ""}
+            {lastAiMessage.substring(0, 160)}
+            {lastAiMessage.length > 160 ? "..." : ""}
           </div>
         )}
       </div>
 
-      {/* Right Panel — Camera, Chat, Controls */}
+      {/* Right Panel — Camera, Chat, VAD, Controls */}
       <div className="right-panel" style={{ position: "relative" }}>
         <UserCamera />
 
@@ -173,40 +173,51 @@ export default function InterviewRoom() {
           currentTranscript={speech.transcript}
         />
 
-        <VADWaveform
-          volume={speech.volume}
-          isListening={speech.isListening}
-          isSpeaking={speech.isSpeaking}
-          isAISpeaking={isAISpeaking}
-        />
+        {/* Subtle VAD indicator — no manual controls */}
+        <div className="vad-section">
+          <VADWaveform
+            volume={speech.volume}
+            isListening={speech.isListening}
+            isSpeaking={speech.isSpeaking}
+            isAISpeaking={isAISpeaking}
+          />
+          <span className={`vad-status ${speech.isListening ? "listening" : ""} ${isAISpeaking ? "speaking" : ""}`}>
+            {isAISpeaking
+              ? "Aria is speaking..."
+              : speech.isSpeaking
+              ? "Listening to you..."
+              : speech.isListening
+              ? "Ready — speak naturally"
+              : "Initializing..."}
+          </span>
+        </div>
 
-        <ProctoringHUD
-          tabSwitchCount={proctoring.tabSwitchCount}
-          isTabVisible={proctoring.isTabVisible}
-          duration={proctoring.formatDuration(proctoring.interviewDuration)}
-        />
-
-        <div className="interview-controls" style={{ borderTop: "none", paddingTop: 0 }}>
-          <div className="controls-right" style={{ marginLeft: 0, width: "100%" }}>
+        {/* Controls */}
+        <div className="interview-controls">
+          <ProctoringHUD
+            tabSwitchCount={proctoring.tabSwitchCount}
+            isTabVisible={proctoring.isTabVisible}
+            duration={proctoring.formatDuration(proctoring.interviewDuration)}
+          />
+          <div className="controls-right">
             <button
               className="btn-secondary"
               onClick={() => setShowCodeEditor(!showCodeEditor)}
-              style={{ flex: 1 }}
+              style={{ fontSize: "13px", padding: "8px 16px" }}
             >
-              {showCodeEditor ? "Hide Code Editor" : "Code Editor"}
+              {showCodeEditor ? "Close Editor" : "Code Editor"}
             </button>
             <button
               className="btn-danger"
               onClick={handleEndInterview}
               disabled={messagesRef.current.length < 1 || isEnding}
-              style={{ flex: 1 }}
+              style={{ fontSize: "13px", padding: "8px 16px" }}
             >
               {isEnding ? "Generating Report..." : "End Interview"}
             </button>
           </div>
         </div>
 
-        {/* Code Editor Overlay */}
         {showCodeEditor && (
           <CodeEditor onClose={() => setShowCodeEditor(false)} />
         )}
