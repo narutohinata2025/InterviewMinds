@@ -1,109 +1,105 @@
-<div align="center">
-  <h1>InterviewMinds</h1>
-  <p><b>AI-Powered Mock Interview Platform with Voice, Coding & Analytics</b></p>
-  <p>
-    <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white"/>
-    <img alt="React" src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB"/>
-    <img alt="Node.js" src="https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white"/>
-    <img alt="Gemini" src="https://img.shields.io/badge/Google%20Gemini-4285F4?style=for-the-badge&logo=google&logoColor=white"/>
-  </p>
-</div>
+# AI Interview Pro
 
-## Overview
+Production-grade AI Interview Platform with a Live2D avatar interviewer, continuous voice activity detection, live code editor, and comprehensive post-interview analytics.
 
-InterviewMinds is a full-stack AI mock interview platform that simulates real technical interviews. Upload your resume and a job description, and an AI interviewer asks personalized questions — including live coding challenges — then provides comprehensive performance analytics.
+## Features
 
-### Key Features
+- **Live2D AI Avatar (Haru)** — Animated interviewer with real-time lip-sync, eye blink, and motion animations using Cubism SDK. Displayed as upper-half only with glow effects.
+- **Continuous Voice Activity Detection** — No press-to-speak button. The system listens continuously via Web Audio API, detects speech through RMS volume analysis, and auto-submits your answer after 1.5s of silence.
+- **AI-Powered Interview** — Groq (Llama 3.3-70b) generates personalized questions based on your resume and job description. 5 interviewer personas: Strict, Friendly, Panel, Behavioral, Technical.
+- **Live Code Editor** — Monaco Editor with syntax highlighting and real-time execution via Piston API. Supports JavaScript, Python, TypeScript, Java, C++.
+- **Proctoring** — Tab-switch detection with warning counter, webcam monitoring with live feed, recording indicator.
+- **Post-Interview Analytics** — Gemini AI scores across 5 dimensions (Content, Communication, Behavior, Domain, Technical). Radar charts, strengths/improvements lists, detailed AI assessment, full transcript replay, and downloadable report.
+- **Web Speech API** — Free browser-native STT (SpeechRecognition) and TTS (SpeechSynthesis). No external voice service required.
 
-- **Resume + JD Parsing** — Upload your PDF resume and paste the job description. AI generates targeted interview questions
-- **AI Avatar Interviewer** — Animated avatar with voice interaction using Web Speech API (free, browser built-in)
-- **3 Interviewer Personas** — Alex (Strict Technical), Sarah (Supportive), James (System Architect)
-- **Live Code Editor** — Monaco Editor with multi-language support and real-time execution via Piston API
-- **Voice Interaction** — Speech-to-text (hold SPACE to talk) and text-to-speech responses
-- **Post-Interview Analytics** — 5-dimensional scoring radar chart, strengths/improvements, detailed feedback
-- **Difficulty Levels** — Easy, Medium, Hard interview modes
+## Architecture
 
-## Tech Stack
-
-| Category | Technology |
-|----------|-----------|
-| **Frontend** | React 18, Vite, TypeScript, Tailwind CSS, Shadcn UI |
-| **Backend** | Node.js, Express, TypeScript |
-| **AI** | Google Gemini API |
-| **Speech** | Web Speech API (browser built-in, free) |
-| **Code Editor** | Monaco Editor |
-| **Code Execution** | Piston API |
-| **Charts** | Recharts |
-| **Monorepo** | TurboRepo, npm workspaces |
+```
+├── frontend/              # Vite + React + TypeScript
+│   ├── public/live2d/     # Cubism SDK Core + Haru model assets
+│   └── src/
+│       ├── pages/         # Landing, Setup, InterviewRoom, Feedback
+│       ├── components/    # Live2DAvatar, UserCamera, ChatPanel, CodeEditor, etc.
+│       ├── hooks/         # useContinuousSpeech, useAvatarLipSync, useProctoring
+│       └── services/      # API client (axios)
+├── backend/               # Node.js + Express + TypeScript
+│   ├── routes/            # /api/chat, /api/resume, /api/interview
+│   └── services/          # Groq LLM, Gemini scoring
+└── package.json           # Root scripts
+```
 
 ## Quick Start
 
 ### Prerequisites
-- Node.js **v18+**
-- Google Gemini API Key ([Get one here](https://aistudio.google.com/apikey))
+- Node.js 18+
+- A modern browser (Chrome recommended for Web Speech API)
 
-### Installation
+### Setup
 
 ```bash
-git clone https://github.com/theunstopabble/InterviewMinds.git
-cd InterviewMinds
+# Install dependencies
 npm install
-cd apps/api && npm install && cd ../..
-cd apps/web && npm install && cd ../..
-```
+cd backend && npm install
+cd ../frontend && npm install
+cd ..
 
-### Environment Setup
+# Configure environment
+cp backend/.env.example backend/.env
+# Edit backend/.env with your API keys:
+# GEMINI_API_KEY=your_key
+# GROQ_API_KEY=your_key
 
-**Backend** (`apps/api/.env`):
-```env
-PORT=8000
-GEMINI_API_KEY=your-gemini-api-key
-GEMINI_MODEL=gemini-2.5-flash
-```
-
-**Frontend** (`apps/web/.env`):
-```env
-VITE_API_URL=http://localhost:8000/api
-```
-
-### Run Development
-
-```bash
+# Start development servers
 npm run dev
 ```
 
-- Backend: http://localhost:8000
 - Frontend: http://localhost:5173
+- Backend: http://localhost:8000
 
-## How It Works
+### Build
 
-1. **Upload Resume & JD** — Paste job description and upload your PDF resume
-2. **Configure Interview** — Choose interviewer persona and difficulty level
-3. **Interview** — AI asks resume-specific and JD-aligned questions via voice/text
-4. **Code Challenges** — Switch to code editor when asked to solve coding problems
-5. **Get Results** — End interview to receive detailed scoring with radar chart, strengths, improvements, and full transcript
-
-## Project Structure
-
+```bash
+npm run build
 ```
-InterviewMinds/
-├── apps/
-│   ├── api/                 # Backend (Express + Gemini)
-│   │   └── src/
-│   │       ├── routes/      # chat, compiler, interview, resume
-│   │       └── index.ts     # Server entry
-│   └── web/                 # Frontend (React + Vite)
-│       └── src/
-│           ├── components/  # AIAvatar, CodeEditor, UI
-│           ├── hooks/       # useSpeech
-│           ├── pages/       # Setup, Interview, Feedback
-│           └── lib/         # API client, constants
-├── packages/
-│   └── shared/              # Shared types
-├── turbo.json
-└── package.json
-```
+
+## Interview Flow
+
+1. **Landing Page** — Upload your resume (PDF)
+2. **Setup Page** — Choose interviewer persona, difficulty level, paste job description, check mic/camera permissions
+3. **Interview Room** — Speak naturally (no buttons), AI avatar responds with lip-sync, chat transcript builds in real-time
+4. **Feedback Page** — View scores, radar chart, strengths, improvements, full transcript, download report
+
+## API Routes
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/health` | GET | Health check |
+| `/api/resume/upload` | POST | Upload PDF resume, returns `resumeId` |
+| `/api/resume/:id` | GET | Get parsed resume text |
+| `/api/chat/init` | POST | Initialize interview session |
+| `/api/chat` | POST | Send message, get AI response |
+| `/api/chat/history/:sessionId` | GET | Get chat history |
+| `/api/interview/end` | POST | End interview, generate Gemini feedback |
+| `/api/interview/:id` | GET | Get interview result |
+
+## Tech Stack
+
+- **Frontend**: React 18, TypeScript, Vite, pixi.js + pixi-live2d-display, Monaco Editor, Recharts
+- **Backend**: Express, TypeScript, Groq SDK, Gemini API
+- **AI**: Groq Llama 3.3-70b (live chat), Google Gemini (post-interview scoring)
+- **Voice**: Web Speech API (free, browser-native STT + TTS)
+- **Avatar**: Live2D Cubism SDK with Haru model
+
+## Production Scaling
+
+The current implementation uses in-memory Maps for session storage, suitable for single-instance deployment (~500 concurrent users per instance).
+
+For 100+ concurrent users at scale:
+- Deploy multiple backend instances behind a load balancer
+- Replace in-memory Maps with Redis for session persistence
+- Add rate limiting per session
+- Consider WebSocket for real-time communication instead of polling
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT
