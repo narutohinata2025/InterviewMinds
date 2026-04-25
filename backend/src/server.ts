@@ -1,15 +1,15 @@
+import path from "path";
+import dotenv from "dotenv";
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+
 import express from "express";
 import cors from "cors";
-import path from "path";
 import { chatRouter } from "./routes/chat";
 import { resumeRouter } from "./routes/resume";
 import { interviewRouter } from "./routes/interview";
 
 const app = express();
 const PORT = process.env.PORT || 8000;
-
-// Load env
-require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "10mb" }));
