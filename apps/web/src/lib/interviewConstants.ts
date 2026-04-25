@@ -1,77 +1,74 @@
-// 🎭 PERSONA CONFIGURATION
 export const PERSONA_DETAILS: Record<
   string,
   { name: string; gender: "male" | "female"; description: string }
 > = {
   strict: {
-    name: "Vikram",
+    name: "Alex",
     gender: "male",
-    description: "Senior Staff Engineer. Direct, strict, & technical.",
+    description: "Senior Staff Engineer - Strict & Technical",
   },
   friendly: {
-    name: "Neha",
+    name: "Sarah",
     gender: "female",
-    description: "Engineering Manager. Supportive & encouraging.",
+    description: "Engineering Manager - Supportive & Encouraging",
   },
   system: {
-    name: "Sam",
+    name: "James",
     gender: "male",
-    description: "System Architect. Focuses on scalability & design.",
+    description: "System Architect - Analytical & Detail-Oriented",
   },
 };
 
-// ✅ BOILERPLATES FOR LANGUAGES
 export const BOILERPLATES: Record<string, string> = {
-  javascript: `// InterviewMinds Environment
-// Node.js v18.x
-
-function solution() {
-  // Write your code here
-
+  javascript: `// JavaScript Solution
+function solve(input) {
+  // Write your solution here
+  return input;
 }
 
-solution();`,
+// Test
+console.log(solve("Hello, World!"));
+`,
+  python: `# Python Solution
+def solve(input_val):
+    # Write your solution here
+    return input_val
 
-  python: `# InterviewMinds Environment
-# Python 3.x
-
-def solution():
-    # Write your code here
-    print("Hello from InterviewMinds!")
-
-if __name__ == "__main__":
-    solution()`,
-
-  java: `// InterviewMinds Environment
-// Java JDK 17
-
-public class Main {
-    public static void main(String[] args) {
-        // Write your code here
-        System.out.println("Hello from InterviewMinds!");
+# Test
+print(solve("Hello, World!"))
+`,
+  java: `public class Main {
+    public static String solve(String input) {
+        // Write your solution here
+        return input;
     }
-}`,
 
-  cpp: `// InterviewMinds Environment
-// GCC C++17
-
-#include <iostream>
+    public static void main(String[] args) {
+        System.out.println(solve("Hello, World!"));
+    }
+}
+`,
+  cpp: `#include <iostream>
+#include <string>
 using namespace std;
 
-int main() {
-    // Write your code here
-    cout << "Hello from InterviewMinds!" << endl;
-    return 0;
-}`,
-
-  c: `// InterviewMinds Environment
-// GCC C11
-
-#include <stdio.h>
+string solve(string input) {
+    // Write your solution here
+    return input;
+}
 
 int main() {
-    // Write your code here
-    printf("Hello from InterviewMinds!\\n");
+    cout << solve("Hello, World!") << endl;
     return 0;
-}`,
+}
+`,
+  typescript: `// TypeScript Solution
+function solve(input: string): string {
+  // Write your solution here
+  return input;
+}
+
+// Test
+console.log(solve("Hello, World!"));
+`,
 };
