@@ -318,7 +318,7 @@ export default function InterviewPage() {
             variant="destructive"
             size="sm"
             onClick={endInterview}
-            disabled={!isInterviewStarted || messages.length < 2}
+            disabled={!isInterviewStarted || messages.length < 1}
             className="gap-1"
           >
             <PhoneOff className="w-4 h-4" />
