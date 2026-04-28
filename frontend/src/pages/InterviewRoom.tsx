@@ -24,6 +24,7 @@ export default function InterviewRoom() {
 
   const messagesRef = useRef<ChatMessage[]>([]);
   const avatarRef = useRef<Live2DAvatarHandle>(null);
+  const isProcessingRef = useRef(false);
 
   const proctoring = useProctoring(true);
 
@@ -31,6 +32,7 @@ export default function InterviewRoom() {
     onSpeechStart: () => setIsAISpeaking(true),
     onSpeechEnd: () => {
       setIsAISpeaking(false);
+      isProcessingRef.current = false;
       speech.resumeAfterAI();
     },
   });
@@ -48,7 +50,10 @@ export default function InterviewRoom() {
 
   const handleTranscriptReady = useCallback(
     async (transcript: string) => {
-      if (!transcript.trim() || isThinking) return;
+      if (!transcript.trim() || isProcessingRef.current) return;
+
+      isProcessingRef.current = true;
+      speech.pauseForAI();
 
       const userMsg: ChatMessage = { role: "user", content: transcript };
       messagesRef.current = [...messagesRef.current, userMsg];
@@ -62,15 +67,15 @@ export default function InterviewRoom() {
         setMessages([...messagesRef.current]);
         setIsThinking(false);
 
-        speech.pauseForAI();
         await lipSync.speak(reply);
       } catch (error) {
         console.error("Chat error:", error);
         setIsThinking(false);
+        isProcessingRef.current = false;
         speech.resumeAfterAI();
       }
     },
-    [sessionId, isThinking]
+    [sessionId]
   );
 
   const speech = useContinuousSpeech({

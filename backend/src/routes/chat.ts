@@ -13,6 +13,7 @@ const sessions = new Map<
     persona: string;
     difficulty: string;
     startTime: number;
+    processing: boolean;
   }
 >();
 
@@ -32,6 +33,7 @@ chatRouter.post("/init", (req: Request, res: Response) => {
     persona: persona || "friendly",
     difficulty: difficulty || "mid",
     startTime: Date.now(),
+    processing: false,
   });
 
   res.json({ success: true, sessionId });
@@ -53,6 +55,13 @@ chatRouter.post("/", async (req: Request, res: Response) => {
       return;
     }
 
+    if (session.processing) {
+      res.status(429).json({ error: "Session is currently processing a message. Please wait." });
+      return;
+    }
+
+    session.processing = true;
+
     const reply = await generateChatResponse(
       message,
       session.resumeText,
@@ -65,9 +74,12 @@ chatRouter.post("/", async (req: Request, res: Response) => {
     // Update history
     session.history.push({ role: "user", content: message });
     session.history.push({ role: "assistant", content: reply });
+    session.processing = false;
 
     res.json({ reply, messageCount: session.history.length });
   } catch (error) {
+    const session = sessions.get(req.body.sessionId);
+    if (session) session.processing = false;
     console.error("Chat error:", error);
     res.status(500).json({ error: "Failed to generate response" });
   }
