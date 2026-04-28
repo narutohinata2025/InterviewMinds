@@ -95,12 +95,12 @@ Be fair but honest. Provide actionable feedback.`;
 
   // Ensure all fields exist with defaults
   return {
-    overall: Math.min(10, Math.max(0, parsed.overall || 5)),
-    content: Math.min(10, Math.max(0, parsed.content || 5)),
-    communication: Math.min(10, Math.max(0, parsed.communication || 5)),
-    behavior: Math.min(10, Math.max(0, parsed.behavior || 5)),
-    domain: Math.min(10, Math.max(0, parsed.domain || 5)),
-    technical: Math.min(10, Math.max(0, parsed.technical || 5)),
+    overall: Math.min(10, Math.max(0, parsed.overall ?? 5)),
+    content: Math.min(10, Math.max(0, parsed.content ?? 5)),
+    communication: Math.min(10, Math.max(0, parsed.communication ?? 5)),
+    behavior: Math.min(10, Math.max(0, parsed.behavior ?? 5)),
+    domain: Math.min(10, Math.max(0, parsed.domain ?? 5)),
+    technical: Math.min(10, Math.max(0, parsed.technical ?? 5)),
     strengths: parsed.strengths || ["Good effort"],
     improvements: parsed.improvements || ["Practice more"],
     summary: parsed.summary || "Interview completed.",
