@@ -109,7 +109,8 @@ export default function InterviewRoom() {
       }
     };
 
-    setTimeout(startInterview, 1500);
+    const timerId = setTimeout(startInterview, 1500);
+    return () => clearTimeout(timerId);
   }, [sessionId]);
 
   const handleEndInterview = useCallback(async () => {

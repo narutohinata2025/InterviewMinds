@@ -208,6 +208,7 @@ export function useContinuousSpeech({
   }, [monitorVolume, startRecognition]);
 
   const stop = useCallback(() => {
+    enabledRef.current = false;
     clearSilenceTimer();
     cancelAnimationFrame(animFrameRef.current);
 
