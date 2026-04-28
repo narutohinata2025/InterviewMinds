@@ -69,4 +69,15 @@ resumeRouter.get("/:id", (req: Request, res: Response) => {
   res.json({ text: resume.text, filename: resume.filename });
 });
 
+// Cleanup old resumes (every 30 minutes)
+setInterval(() => {
+  const now = Date.now();
+  const MAX_AGE = 4 * 60 * 60 * 1000; // 4 hours
+  for (const [id, resume] of resumes) {
+    if (now - resume.uploadedAt > MAX_AGE) {
+      resumes.delete(id);
+    }
+  }
+}, 30 * 60 * 1000);
+
 export { resumes };

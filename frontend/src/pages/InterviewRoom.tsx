@@ -122,16 +122,18 @@ export default function InterviewRoom() {
     if (messagesRef.current.length < 1) return;
 
     setIsEnding(true);
-    speech.stop();
+    speech.pauseForAI();
     lipSync.cancelSpeech();
 
     try {
       const result = await endInterview(sessionId);
+      speech.stop();
       sessionStorage.setItem("interviewResult", JSON.stringify(result));
       navigate("/feedback");
     } catch (error) {
       console.error("End interview error:", error);
       setIsEnding(false);
+      speech.resumeAfterAI();
     }
   }, [sessionId, navigate, speech, lipSync]);
 

@@ -64,3 +64,14 @@ interviewRouter.get("/:id", (req: Request, res: Response) => {
   }
   res.json(result);
 });
+
+// Cleanup old results (every 30 minutes)
+setInterval(() => {
+  const now = Date.now();
+  const MAX_AGE = 4 * 60 * 60 * 1000; // 4 hours
+  for (const [id, result] of results) {
+    if (now - ((result as { completedAt?: number }).completedAt || 0) > MAX_AGE) {
+      results.delete(id);
+    }
+  }
+}, 30 * 60 * 1000);
